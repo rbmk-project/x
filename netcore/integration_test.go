@@ -20,6 +20,7 @@ func TestDialerIntegration(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{}))
 	netx := netcore.NewNetwork()
 	netx.Logger = logger
+	netx.WrapConn = netcore.WrapConn
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -40,6 +41,7 @@ func TestTLSDialerIntegration(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{}))
 	netx := netcore.NewNetwork()
 	netx.Logger = logger
+	netx.WrapConn = netcore.WrapConn
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
