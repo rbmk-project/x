@@ -34,12 +34,13 @@ func (p *Pool) Add(conn io.Closer) {
 
 // Close closes all the connections inside the pool.
 func (p *Pool) Close() error {
-
+	// Lock and copy the connections to close.
 	p.mu.Lock()
 	conns := p.conns
 	p.conns = nil
 	p.mu.Unlock()
 
+	// Close all the connections.
 	var errv []error
 	for _, conn := range conns {
 		if err := conn.Close(); err != nil {
