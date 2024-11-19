@@ -15,12 +15,12 @@ func TestDialerIntegration(t *testing.T) {
 		t.Skip("skip test in short mode")
 	}
 
-	dialer := netcore.NewDialer()
+	netx := netcore.NewNetwork()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	conn, err := dialer.DialContext(ctx, "tcp", "example.com:80")
+	conn, err := netx.DialContext(ctx, "tcp", "example.com:80")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,12 +33,12 @@ func TestTLSDialerIntegration(t *testing.T) {
 		t.Skip("skip test in short mode")
 	}
 
-	dialer := netcore.NewTLSDialer()
+	netx := netcore.NewNetwork()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	conn, err := dialer.DialContext(ctx, "tcp", "example.com:443")
+	conn, err := netx.DialTLSContext(ctx, "tcp", "example.com:443")
 	if err != nil {
 		t.Fatal(err)
 	}

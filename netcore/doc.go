@@ -8,9 +8,9 @@ connection events via the [log/slog] package.
 
 # Features
 
-- TCP/UDP dialer compatible with the [*net.Dialer];
+- TCP/UDP [*Network.DialContext] method compatible with [net/http].
 
-- TLS dialer compatible with the [*tls.Dialer].
+- TLS [*Network.DialTLSContext] method compatible with [net/http].
 
 # Design Documents
 
