@@ -40,8 +40,7 @@ func (emptyAddr) Network() string { return "" }
 // String implements [net.Addr].
 func (emptyAddr) String() string { return "" }
 
-// maybeWrapConn wraps the connection if we have a non-nil logger
-// and the connection itself is not nil.
+// maybeWrapConn wraps a connection when it makes sense to do so.
 func (nx *Network) maybeWrapConn(ctx context.Context, conn net.Conn) net.Conn {
 	if conn != nil && nx.Logger != nil && nx.WrapConn != nil {
 		conn = nx.WrapConn(ctx, nx, conn)
