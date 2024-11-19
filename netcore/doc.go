@@ -12,6 +12,8 @@ connection events via the [log/slog] package.
 
 - TLS [*Network.DialTLSContext] method compatible with [net/http].
 
+- Optional logging for structured diagnostic events through [log/slog].
+
 # Design Documents
 
 This package is experimental and has no design documents for now.

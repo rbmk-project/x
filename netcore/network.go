@@ -11,6 +11,7 @@ import (
 	"crypto/tls"
 	"log/slog"
 	"net"
+	"time"
 )
 
 // Network allows dialing and measuring TCP/UDP/TLS connections.
@@ -53,3 +54,9 @@ func NewNetwork() *Network {
 
 // DefaultNetwork is the default [*Network] used by this package.
 var DefaultNetwork = NewNetwork()
+
+// timeNow is a function that returns the current time.
+func (nx *Network) timeNow() time.Time {
+	// TODO(bassosimone): allow to override using a specific function
+	return time.Now()
+}
