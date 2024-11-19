@@ -11,6 +11,7 @@ import (
 	"crypto/tls"
 	"log/slog"
 	"net"
+	"time"
 )
 
 // Network allows dialing and measuring TCP/UDP/TLS connections.
@@ -44,6 +45,10 @@ type Network struct {
 	// will try to create a suitable config based on the network and address
 	// that are passed to the DialTLSContext method.
 	TLSConfig *tls.Config
+
+	// TimeNow is an optional function that returns the current time.
+	// If this field is nil, the [time.Now] function will be used.
+	TimeNow func() time.Time
 }
 
 // NewNetwork constructs a new [*Network] with default settings.
@@ -53,3 +58,11 @@ func NewNetwork() *Network {
 
 // DefaultNetwork is the default [*Network] used by this package.
 var DefaultNetwork = NewNetwork()
+
+// timeNow is a function that returns the current time.
+func (nx *Network) timeNow() time.Time {
+	if nx.TimeNow != nil {
+		return nx.TimeNow()
+	}
+	return time.Now()
+}

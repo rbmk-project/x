@@ -11,14 +11,13 @@ package netcore
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net"
+	"time"
 )
 
 // DialContext establishes a new TCP/UDP connection.
 func (nx *Network) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	// TODO(bassosimone): decide whether we want an overall timeout here,
-	// which I don't think is fine, because it's not granular enough.
-
 	// resolve the endpoints to connect to
 	endpoints, err := nx.maybeLookupEndpoint(ctx, address)
 	if err != nil {
@@ -57,8 +56,18 @@ func (nx *Network) sequentialDial(
 // dialLog dials and emits structured logs.
 func (nx *Network) dialLog(ctx context.Context, network, address string) (net.Conn, error) {
 	// TODO(bassosimone): do we want to automatically wrap the connection?
-	// TODO(bassosimone): emit structured logs
-	return nx.dialNet(ctx, network, address)
+
+	// Emit structured event before the dial
+	t0 := nx.emitConnectStart(ctx, network, address)
+
+	// Establish the connection
+	conn, err := nx.dialNet(ctx, network, address)
+
+	// Emit structured event after the dial
+	nx.emitConnectDone(ctx, network, address, t0, conn, err)
+
+	// Return the connection and error to the caller
+	return conn, err
 }
 
 // dialNet dials using the net package or the configured dialing override.
@@ -72,4 +81,36 @@ func (nx *Network) dialNet(ctx context.Context, network, address string) (net.Co
 	child := &net.Dialer{}
 	child.SetMultipathTCP(false)
 	return child.DialContext(ctx, network, address)
+}
+
+// emitConnectStart emits a structured event before the dial.
+func (nx *Network) emitConnectStart(ctx context.Context, network, address string) time.Time {
+	t0 := nx.timeNow()
+	if nx.Logger != nil {
+		nx.Logger.InfoContext(
+			ctx,
+			"connectStart",
+			slog.String("network", network),
+			slog.String("remoteAddr", address),
+			slog.Time("t", t0),
+		)
+	}
+	return t0
+}
+
+// emitConnectDone emits a structured event after the dial.
+func (nx *Network) emitConnectDone(ctx context.Context,
+	network, address string, t0 time.Time, conn net.Conn, err error) {
+	if nx.Logger != nil {
+		nx.Logger.InfoContext(
+			ctx,
+			"connectDone",
+			slog.Any("err", err),
+			slog.String("localAddr", connLocalAddr(conn).String()),
+			slog.String("network", network),
+			slog.String("remoteAddr", address),
+			slog.Time("t0", t0),
+			slog.Time("t", nx.timeNow()),
+		)
+	}
 }

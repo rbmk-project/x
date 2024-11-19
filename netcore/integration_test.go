@@ -4,6 +4,8 @@ package netcore_test
 
 import (
 	"context"
+	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -15,7 +17,9 @@ func TestDialerIntegration(t *testing.T) {
 		t.Skip("skip test in short mode")
 	}
 
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{}))
 	netx := netcore.NewNetwork()
+	netx.Logger = logger
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -33,7 +37,9 @@ func TestTLSDialerIntegration(t *testing.T) {
 		t.Skip("skip test in short mode")
 	}
 
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{}))
 	netx := netcore.NewNetwork()
+	netx.Logger = logger
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
