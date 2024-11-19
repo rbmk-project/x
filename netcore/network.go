@@ -49,6 +49,10 @@ type Network struct {
 	// TimeNow is an optional function that returns the current time.
 	// If this field is nil, the [time.Now] function will be used.
 	TimeNow func() time.Time
+
+	// WrapConn is an optional function to wrap a connection to emit
+	// structured logs. [WrapConn] is the default wrapper to use.
+	WrapConn func(ctx context.Context, netx *Network, conn net.Conn) net.Conn
 }
 
 // NewNetwork constructs a new [*Network] with default settings.

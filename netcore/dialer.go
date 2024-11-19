@@ -55,8 +55,6 @@ func (nx *Network) sequentialDial(
 
 // dialLog dials and emits structured logs.
 func (nx *Network) dialLog(ctx context.Context, network, address string) (net.Conn, error) {
-	// TODO(bassosimone): do we want to automatically wrap the connection?
-
 	// Emit structured event before the dial
 	t0 := nx.emitConnectStart(ctx, network, address)
 
@@ -65,6 +63,9 @@ func (nx *Network) dialLog(ctx context.Context, network, address string) (net.Co
 
 	// Emit structured event after the dial
 	nx.emitConnectDone(ctx, network, address, t0, conn, err)
+
+	// Maybe wrap the connection if it's not nil and it makes sense to wrap it
+	conn = nx.maybeWrapConn(ctx, conn)
 
 	// Return the connection and error to the caller
 	return conn, err
@@ -90,7 +91,7 @@ func (nx *Network) emitConnectStart(ctx context.Context, network, address string
 		nx.Logger.InfoContext(
 			ctx,
 			"connectStart",
-			slog.String("network", network),
+			slog.String("protocol", network),
 			slog.String("remoteAddr", address),
 			slog.Time("t", t0),
 		)
@@ -107,7 +108,7 @@ func (nx *Network) emitConnectDone(ctx context.Context,
 			"connectDone",
 			slog.Any("err", err),
 			slog.String("localAddr", connLocalAddr(conn).String()),
-			slog.String("network", network),
+			slog.String("protocol", network),
 			slog.String("remoteAddr", address),
 			slog.Time("t0", t0),
 			slog.Time("t", nx.timeNow()),
