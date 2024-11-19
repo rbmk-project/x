@@ -16,31 +16,63 @@ import (
 
 // DialContext establishes a new TCP/UDP connection.
 func (nx *Network) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	// TODO(bassosimone): decide whether we want an overall timeout here
+	// TODO(bassosimone): decide whether we want an overall timeout here,
+	// which I don't think is fine, because it's not granular enough.
 
-	// resolve the domain name to IP addresses
-	domain, port, err := net.SplitHostPort(address)
+	// resolve the endpoints to connect to
+	endpoints, err := nx.maybeLookupEndpoint(ctx, address)
 	if err != nil {
 		return nil, err
 	}
-	addrs, err := nx.maybeLookupHost(ctx, domain)
-	if err != nil {
-		return nil, err
-	}
 
-	// TODO(bassosimone): decide whether we want to use happy eyeballs here
+	// sequentially attempt with each available endpoint
+	return nx.sequentialDial(ctx, network, nx.dialLog, endpoints...)
+}
 
-	// attempt using each IP address
+// dialContextFunc is a function used to dial a connection.
+type dialContextFunc func(ctx context.Context, network, address string) (net.Conn, error)
+
+// sequentialDial attempts to dial the endpoints in sequence until one
+// of them succeeds. It returns the first successfully established network
+// connection, on success, and the union of all errors, otherwise.
+func (nx *Network) sequentialDial(
+	ctx context.Context,
+	network string,
+	fx dialContextFunc,
+	endpoints ...string,
+) (net.Conn, error) {
+	// TODO(bassosimone): decide whether we want to sort IPv4 before IPv6
+	// here, and whether we want another method for happy eyeballs.
 	var errv []error
-	for _, addr := range addrs {
-		address = net.JoinHostPort(addr, port)
-		conn, err := nx.dialLog(ctx, network, address)
+	for _, endpoint := range endpoints {
+		conn, err := fx(ctx, network, endpoint)
 		if conn != nil && err == nil {
 			return conn, nil
 		}
 		errv = append(errv, err)
 	}
 	return nil, errors.Join(errv...)
+}
+
+// maybeLookupEndpoint resolves the domain name inside an endpoint into
+// a list of TCP/UDP endpoints. If the domain name is already an IP
+// address, we short circuit the lookup.
+func (nx *Network) maybeLookupEndpoint(ctx context.Context, endpoint string) ([]string, error) {
+	domain, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs, err := nx.maybeLookupHost(ctx, domain)
+	if err != nil {
+		return nil, err
+	}
+
+	var endpoints []string
+	for _, addr := range addrs {
+		endpoints = append(endpoints, net.JoinHostPort(addr, port))
+	}
+	return endpoints, nil
 }
 
 // maybeLookupHost resolves a domain name to IP addresses unless the domain
