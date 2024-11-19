@@ -18,8 +18,8 @@ import (
 // may set (e.g., DialContextFunc) are also safe.
 type TLSDialer struct {
 	// Config is the TLS client config to use. If this field is nil, we
-	// will try to create a suitable config based on the address that is
-	// passed to the DialContext function.
+	// will try to create a suitable config based on the network and address
+	// that are passed to the DialContext method.
 	Config *tls.Config
 
 	// DialContextFunc is the optional dialer for creating new TCP and UDP

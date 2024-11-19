@@ -14,7 +14,7 @@ import (
 //
 // A [*Dialer] is safe for concurrent use by multiple goroutines
 // as long as you don't modify its fields after construction and the
-// underlying fields you may set (e.g., DialContext) are also safe.
+// underlying fields you may set (e.g., DialContextFunc) are also safe.
 type Dialer struct {
 	// DialContextFunc is the optional dialer for creating new
 	// TCP and UDP connections. If this field is nil, the default

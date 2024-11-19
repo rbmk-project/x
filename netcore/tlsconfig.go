@@ -7,6 +7,8 @@ import (
 	"net"
 )
 
+// newTLSConfig is a best-effort attempt at creating a suitable TLS config
+// for TCP and UDP transports using the network and address.
 func newTLSConfig(network, address string) (*tls.Config, error) {
 	sni, port, err := net.SplitHostPort(address)
 	if err != nil {
