@@ -36,6 +36,10 @@ type Network struct {
 	// default [*net.Resolver] from the [net] package.
 	LookupHostFunc func(ctx context.Context, domain string) ([]string, error)
 
+	// NewTLSClientConn is the optional function to create a new TLS client
+	// connection. If this field is nil, we use the [crypto/tls] package.
+	NewTLSClientConn func(conn net.Conn, config *tls.Config) TLSConn
+
 	// TLSConfig is the TLS client config to use. If this field is nil, we
 	// will try to create a suitable config based on the network and address
 	// that are passed to the DialTLSContext method.

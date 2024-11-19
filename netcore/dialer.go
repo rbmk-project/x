@@ -54,14 +54,15 @@ func (nx *Network) sequentialDial(
 	return nil, errors.Join(errv...)
 }
 
+// dialLog dials and emits structured logs.
 func (nx *Network) dialLog(ctx context.Context, network, address string) (net.Conn, error) {
+	// TODO(bassosimone): do we want to automatically wrap the connection?
 	// TODO(bassosimone): emit structured logs
 	return nx.dialNet(ctx, network, address)
 }
 
+// dialNet dials using the net package or the configured dialing override.
 func (nx *Network) dialNet(ctx context.Context, network, address string) (net.Conn, error) {
-	// TODO(bassosimone): do we want to automatically wrap the connection?
-
 	// if there's an user provided dialer func, use it
 	if nx.DialContextFunc != nil {
 		return nx.DialContextFunc(ctx, network, address)
