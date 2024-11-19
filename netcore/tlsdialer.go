@@ -46,6 +46,14 @@ func (td *TLSDialer) DialContext(ctx context.Context, network, address string) (
 
 	// TODO(bassosimone): we should use DialContextFunc instead,
 	// which means we need to manually dial here
+	//
+	// TODO(bassosimone): using DialContextFunc here would lead to
+	// lots of code duplication between this and the other dialer
+	// which would probably be quite bad for maintenance.
+	//
+	// OTOH, if I create a single type named Network (for example)
+	// that does both DialContext and DialTLSContext then I am losing
+	// the loose compatibility with standard library types.
 	child := &tls.Dialer{Config: config}
 
 	return child.DialContext(ctx, network, address)
