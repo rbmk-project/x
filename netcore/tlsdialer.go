@@ -138,6 +138,8 @@ func tlsPeerCerts(
 	state tls.ConnectionState, err error) (out [][]byte) {
 	out = [][]byte{}
 
+	// 1. Check whether the error is a known certificate error and extract
+	// the certificate using `errors.As` for additional robustness.
 	var x509HostnameError x509.HostnameError
 	if errors.As(err, &x509HostnameError) {
 		// Test case: https://wrong.host.badssl.com/
@@ -160,6 +162,7 @@ func tlsPeerCerts(
 		return
 	}
 
+	// 2. Otherwise extract certificates from the connection state.
 	for _, cert := range state.PeerCertificates {
 		out = append(out, cert.Raw)
 	}
