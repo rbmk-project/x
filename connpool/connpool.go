@@ -6,6 +6,7 @@ package connpool
 import (
 	"errors"
 	"io"
+	"slices"
 	"sync"
 )
 
@@ -32,7 +33,11 @@ func (p *Pool) Add(conn io.Closer) {
 	p.mu.Unlock()
 }
 
-// Close closes all the connections inside the pool.
+// Close closes all the connections inside the pool iterating
+// in backward order. Therefore, if one registers a TCP connection
+// and then the corresponding TLS connection, the TLS connection
+// is closed first. The returned error is the join of all the
+// errors that occurred when closing connections.
 func (p *Pool) Close() error {
 	// Lock and copy the connections to close.
 	p.mu.Lock()
@@ -42,7 +47,7 @@ func (p *Pool) Close() error {
 
 	// Close all the connections.
 	var errv []error
-	for _, conn := range conns {
+	for _, conn := range slices.Backward(conns) {
 		if err := conn.Close(); err != nil {
 			errv = append(errv, err)
 		}
