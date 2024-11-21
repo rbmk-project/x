@@ -78,20 +78,21 @@ var _ net.Conn = &TCPConn{}
 
 // Read implements [net.Conn].
 func (c *TCPConn) Read(buf []byte) (int, error) {
-	// prevent concurrent goroutines from messing with the read buffer
-	c.rlock.Lock()
-	defer c.rlock.Unlock()
-
 	for {
 		// if there's buffered data, just read from the buffer
-		if count, err := c.buf.Read(buf); count > 0 && err == nil {
+		// holding the lock just in case (even though one is not
+		// supposed to invoke [Read] concurrently)
+		c.rlock.Lock()
+		count, err := c.buf.Read(buf)
+		c.rlock.Unlock()
+		if count > 0 {
 			return count, nil
 		}
 
 		// otherwise, attempt to read the next packet
 		pkt, err := c.Port.ReadPacket()
 		if err != nil {
-			return 0, nil
+			return 0, err
 		}
 
 		// handle TCP flags
@@ -103,7 +104,12 @@ func (c *TCPConn) Read(buf []byte) (int, error) {
 		}
 
 		// fill the buffer
+		//
+		// holding the lock just in case (even though one is not
+		// supposed to invoke [Read] concurrently)
+		c.rlock.Lock()
 		c.buf.Write(pkt.Payload)
+		c.rlock.Unlock()
 	}
 }
 
