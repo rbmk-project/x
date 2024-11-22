@@ -9,19 +9,12 @@ package netsim
 import (
 	"log"
 	"sync"
+
+	"github.com/rbmk-project/x/netsim/packet"
 )
 
 // LinkStack is the [*Stack] as seen by a [*Link].
-type LinkStack interface {
-	// EOF returns a channel that is closed when the stack is done.
-	EOF() <-chan struct{}
-
-	// Input returns a channel to send packets to the stack.
-	Input() chan<- *Packet
-
-	// Output returns a channel to receive packets from the stack.
-	Output() <-chan *Packet
-}
+type LinkStack = packet.NetworkDevice
 
 // Link models a link between two [*Stack] instances.
 //
