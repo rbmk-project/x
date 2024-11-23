@@ -11,6 +11,9 @@ package netsim
 import "golang.org/x/sys/unix"
 
 const (
+	// EADDRNOTAVAIL is the address not available error.
+	EADDRNOTAVAIL = unix.EADDRNOTAVAIL
+
 	// EADDRINUSE is the address in use error.
 	EADDRINUSE = unix.EADDRINUSE
 

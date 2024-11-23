@@ -11,6 +11,9 @@ package netsim
 import "golang.org/x/sys/windows"
 
 const (
+	// EADDRNOTAVAIL is the address not available error.
+	EADDRNOTAVAIL = windows.WSAEADDRNOTAVAIL
+
 	// EADDRINUSE is the address in use error.
 	EADDRINUSE = windows.WSAEADDRINUSE
 

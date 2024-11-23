@@ -18,7 +18,7 @@ import (
 // Stack models a network stack.
 type Stack struct {
 	// addr is the stack network address.
-	addr netip.Addr
+	addrs []netip.Addr
 
 	// eof unblocks any blocking operation when the stack is closed.
 	eof chan struct{}
@@ -45,10 +45,10 @@ type Stack struct {
 // NewStack creates a new [*Stack] instance and starts a
 // goroutine demuxing incoming traffic. Remember to invoke
 // Close to stop any muxing/demuxing goroutine.
-func NewStack(addr netip.Addr) *Stack {
+func NewStack(addrs ...netip.Addr) *Stack {
 	const firstEphemeralPort = 49152
 	ns := &Stack{
-		addr:    addr,
+		addrs:   addrs,
 		eof:     make(chan struct{}),
 		eofOnce: sync.Once{},
 		input:   make(chan *Packet),
@@ -62,6 +62,11 @@ func NewStack(addr netip.Addr) *Stack {
 	}
 	go ns.demuxLoop()
 	return ns
+}
+
+// Addresses returns the network stack addresses.
+func (ns *Stack) Addresses() []netip.Addr {
+	return append([]netip.Addr{}, ns.addrs...)
 }
 
 // EOF returns the channel to wait for the stack to close.
@@ -81,21 +86,82 @@ func (ns *Stack) demuxLoop() {
 	}
 }
 
-// demux demuxes a single incoming [*Packet].
-func (ns *Stack) demux(pkt *Packet) error {
-	// Find a route using the five tuple then fallback using
-	// the three tuple for listening sockets.
-	ns.portmu.RLock()
+// findPortLocked finds a port using the given address.
+//
+// The algorithm is as follows:
+//
+// 1. first try using the five tuple.
+//
+// 2. if not found, try using the three tuple, where
+// the remote address is invalid.
+//
+// 3. if not found, use a five tuple where the
+// local IP address is unspecified.
+//
+// 4. if not found, use a three tuple where the
+// the remote address is invalid, and the IP local
+// address is unspecified.
+//
+// 5. otherwise, return nil.
+//
+// The caller must hold the portmu lock.
+func (ns *Stack) findPortLocked(pkt *Packet) *Port {
+	// 1.
 	addr := PortAddr{
 		LocalAddr:  netip.AddrPortFrom(pkt.DstAddr, pkt.DstPort),
 		Protocol:   pkt.IPProtocol,
 		RemoteAddr: netip.AddrPortFrom(pkt.SrcAddr, pkt.SrcPort),
 	}
-	port := ns.ports[addr]
-	if port == nil {
-		addr.RemoteAddr = netip.AddrPort{}
-		port = ns.ports[addr]
+	if port := ns.ports[addr]; port != nil {
+		return port
 	}
+
+	// 2.
+	addr = PortAddr{
+		LocalAddr:  netip.AddrPortFrom(pkt.DstAddr, pkt.DstPort),
+		Protocol:   pkt.IPProtocol,
+		RemoteAddr: netip.AddrPort{},
+	}
+	if port := ns.ports[addr]; port != nil {
+		return port
+	}
+
+	for _, ipAddr := range []netip.Addr{netip.IPv4Unspecified(), netip.IPv6Unspecified()} {
+		// 3.
+		addr = PortAddr{
+			LocalAddr:  netip.AddrPortFrom(ipAddr, pkt.DstPort),
+			Protocol:   pkt.IPProtocol,
+			RemoteAddr: netip.AddrPortFrom(pkt.SrcAddr, pkt.SrcPort),
+		}
+		if port := ns.ports[addr]; port != nil {
+			return port
+		}
+
+		// 4.
+		addr = PortAddr{
+			LocalAddr:  netip.AddrPortFrom(ipAddr, pkt.DstPort),
+			Protocol:   pkt.IPProtocol,
+			RemoteAddr: netip.AddrPort{},
+		}
+		if port := ns.ports[addr]; port != nil {
+			return port
+		}
+	}
+
+	return nil
+}
+
+// demux demuxes a single incoming [*Packet].
+func (ns *Stack) demux(pkt *Packet) error {
+	// Discard packet if the address is not local.
+	if !ns.isLocalAddr(pkt.DstAddr) {
+		return EHOSTUNREACH
+	}
+
+	// Find a route using the five tuple then fallback using
+	// the three tuple for listening sockets.
+	ns.portmu.RLock()
+	port := ns.findPortLocked(pkt)
 	ns.portmu.RUnlock()
 	if port == nil {
 		return EHOSTUNREACH
@@ -179,6 +245,16 @@ func (ns *Stack) DialContext(ctx context.Context, network, address string) (net.
 	}
 }
 
+// isLocalAddr returns true if the address is local to the stack.
+func (ns *Stack) isLocalAddr(addr netip.Addr) bool {
+	for _, a := range ns.addrs {
+		if a == addr {
+			return true
+		}
+	}
+	return false
+}
+
 // listen creates a new listening [*Port].
 func (ns *Stack) listen(protocol IPProtocol, address string) (*Port, error) {
 	// Run while locking the available ports.
@@ -191,8 +267,8 @@ func (ns *Stack) listen(protocol IPProtocol, address string) (*Port, error) {
 	if err != nil {
 		return nil, EINVAL
 	}
-	if laddr.Addr().IsUnspecified() {
-		laddr = netip.AddrPortFrom(ns.addr, laddr.Port())
+	if !laddr.Addr().IsUnspecified() && !ns.isLocalAddr(laddr.Addr()) {
+		return nil, EADDRNOTAVAIL
 	}
 	if laddr.Port() <= 0 {
 		lport, err := ns.newEphemeralPortNumberLocked(protocol)
@@ -224,12 +300,26 @@ func (ns *Stack) dial(protocol IPProtocol, address string) (*Port, error) {
 		return nil, EHOSTUNREACH
 	}
 
+	// Pick the correct local address for the remote address.
+	var ipAddrLocal netip.Addr
+	for _, addr := range ns.addrs {
+		if raddr.Addr().Is4() == addr.Is4() {
+			ipAddrLocal = addr
+			break
+		}
+		ipAddrLocal = addr
+		break
+	}
+	if !ipAddrLocal.IsValid() {
+		return nil, EADDRNOTAVAIL
+	}
+
 	// Construct the local address and use a local port.
 	lport, err := ns.newEphemeralPortNumberLocked(protocol)
 	if err != nil {
 		return nil, err
 	}
-	laddr := netip.AddrPortFrom(ns.addr, lport)
+	laddr := netip.AddrPortFrom(ipAddrLocal, lport)
 
 	// Create the port proper and setup muxing traffic.
 	return ns.newPortLocked(protocol, laddr, raddr)

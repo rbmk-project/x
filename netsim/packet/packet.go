@@ -151,6 +151,9 @@ func (p *Packet) stringTCP() string {
 
 // NetworkDevice is a network device to read/write [*Packet].
 type NetworkDevice interface {
+	// Addresses returns the device addresses.
+	Addresses() []netip.Addr
+
 	// EOF returns a channel that is closed when the device is closed.
 	EOF() <-chan struct{}
 
