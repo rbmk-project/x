@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Package router provides network routing capabilities for testing
+// Package router provides network routing capabilities for testing.
 package router
 
 import (
