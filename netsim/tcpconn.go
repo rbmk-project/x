@@ -62,6 +62,10 @@ func (c *TCPConn) Connect(ctx context.Context) (err error) {
 		if err != nil {
 			return
 		}
+		if pkt.Flags == TCPFlagRST {
+			err = ECONNREFUSED
+			return
+		}
 		if pkt.Flags != TCPFlagSYN|TCPFlagACK {
 			err = ECONNABORTED
 			return
