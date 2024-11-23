@@ -45,8 +45,9 @@ func (tl *TCPListener) Accept() (net.Conn, error) {
 		if pkt.Flags != TCPFlagSYN {
 			continue
 		}
+		laddr := netip.AddrPortFrom(pkt.DstAddr, pkt.DstPort)
 		raddr := netip.AddrPortFrom(pkt.SrcAddr, pkt.SrcPort)
-		conn, err := tl.stack.NewTCPConn(tl.Port.addr.LocalAddr, raddr)
+		conn, err := tl.stack.NewTCPConn(laddr, raddr)
 		if err != nil {
 			continue
 		}
