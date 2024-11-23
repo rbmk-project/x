@@ -90,7 +90,7 @@ func (ns *Stack) demuxLoop() {
 //
 // The algorithm is as follows:
 //
-// 1. first try using the five tuple.
+// 1. first, try using the five tuple.
 //
 // 2. if not found, try using the three tuple, where
 // the remote address is invalid.
@@ -303,7 +303,7 @@ func (ns *Stack) dial(protocol IPProtocol, address string) (*Port, error) {
 	// Pick the correct local address for the remote address.
 	var ipAddrLocal netip.Addr
 	for _, addr := range ns.addrs {
-		if raddr.Addr().Is4() == addr.Is4() {
+		if raddr.Addr().Is4() && addr.Is4() {
 			ipAddrLocal = addr
 			break
 		}
