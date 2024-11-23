@@ -3,11 +3,9 @@
 package netsim_test
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 
 	"github.com/rbmk-project/x/netsim"
@@ -45,15 +43,7 @@ func Example_http() {
 	scenario.Attach(clientStack)
 
 	// Create the HTTP client
-	clientTxp := &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			conn, err := clientStack.DialContext(ctx, "tcp", addr)
-			if err != nil {
-				return nil, err
-			}
-			return conn, nil
-		},
-	}
+	clientTxp := scenario.NewHTTPTransport(clientStack)
 	defer clientTxp.CloseIdleConnections()
 	clientHTTP := &http.Client{Transport: clientTxp}
 
