@@ -380,14 +380,14 @@ func (ns *Stack) dial(protocol IPProtocol, address string) (*Port, error) {
 // FindLocalAddrFor returns the first local address that has
 // the same IP version as the remote address.
 func (ns *Stack) FindLocalAddrFor(raddr netip.Addr) (netip.Addr, error) {
-	// Normalized to IPv4 if mapped.
+	// Normalize to IPv4 if mapped.
 	if raddr.Is4In6() {
 		raddr = raddr.Unmap()
 	}
 
 	var result netip.Addr
 	for _, addr := range ns.addrs {
-		// Normalized to IPv4 if mapped.
+		// Normalize to IPv4 if mapped.
 		if addr.Is4In6() {
 			addr = addr.Unmap()
 		}
