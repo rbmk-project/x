@@ -19,7 +19,7 @@ func Example_router() {
 	scenario := netsim.NewScenario("testdata")
 	defer scenario.Close()
 
-	// Create server stack running a DNS server.
+	// Create server stack emulating dns.google.
 	//
 	// This includes:
 	//
@@ -28,30 +28,13 @@ func Example_router() {
 	// 2. registering the proper domain names and addresses
 	//
 	// 3. updating the PKI database to include the server's certificate
-	scenario.Attach(scenario.MustNewStack(&netsim.StackConfig{
-		DomainNames:       []string{"dns.google"},
-		Addresses:         []string{"8.8.8.8"},
-		DNSOverUDPHandler: scenario.DNSHandler(),
-		HTTPSHandler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			rw.Write([]byte("Bonsoir, Elliot!\n"))
-		}),
-	}))
+	scenario.Attach(scenario.MustNewGoogleDNSStack())
 
-	// Create server stack running a HTTP-over-TLS server.
-	scenario.Attach(scenario.MustNewStack(&netsim.StackConfig{
-		DomainNames:       []string{"www.example.com"},
-		Addresses:         []string{"93.184.215.14"},
-		DNSOverUDPHandler: scenario.DNSHandler(),
-		HTTPSHandler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			rw.Write([]byte("Bonsoir, Elliot!\n"))
-		}),
-	}))
+	// Create server stack emulating www.example.com.
+	scenario.Attach(scenario.MustNewExampleComStack())
 
 	// Create and attach the client stack.
-	clientStack := scenario.MustNewStack(&netsim.StackConfig{
-		Addresses:       []string{"130.192.91.211"},
-		ClientResolvers: []string{"8.8.8.8"},
-	})
+	clientStack := scenario.MustNewClientStack()
 	scenario.Attach(clientStack)
 
 	// Create the HTTP client
@@ -77,5 +60,5 @@ func Example_router() {
 	fmt.Printf("%s", string(body))
 
 	// Output:
-	// Bonsoir, Elliot!
+	// Example Web Server.
 }
