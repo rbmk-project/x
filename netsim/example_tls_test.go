@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/rbmk-project/x/netsim"
@@ -21,7 +20,7 @@ func Example_tls() {
 	scenario := netsim.NewScenario("testdata")
 	defer scenario.Close()
 
-	// Create server stack running a HTTP-over-TLS server.
+	// Create server stack emulating dns.google.
 	//
 	// This includes:
 	//
@@ -30,18 +29,10 @@ func Example_tls() {
 	// 2. registering the proper domain names and addresses
 	//
 	// 3. updating the PKI database to include the server's certificate
-	scenario.Attach(scenario.MustNewStack(&netsim.StackConfig{
-		DomainNames: []string{"dns.google"},
-		Addresses:   []string{"8.8.8.8"},
-		HTTPSHandler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			rw.Write([]byte("Bonsoir, Elliot!\n"))
-		}),
-	}))
+	scenario.Attach(scenario.MustNewGoogleDNSStack())
 
 	// Create and attach the client stack.
-	clientStack := scenario.MustNewStack(&netsim.StackConfig{
-		Addresses: []string{"130.192.91.211"},
-	})
+	clientStack := scenario.MustNewClientStack()
 	scenario.Attach(clientStack)
 
 	// Create a context with a watchdog timeout.

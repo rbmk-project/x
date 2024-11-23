@@ -20,7 +20,7 @@ func Example_dnsOverUDP() {
 	scenario := netsim.NewScenario("testdata")
 	defer scenario.Close()
 
-	// Create server stack running a DNS-over-UDP server.
+	// Create server stack emulating dns.google.
 	//
 	// This includes:
 	//
@@ -29,16 +29,10 @@ func Example_dnsOverUDP() {
 	// 2. registering the proper domain names and addresses
 	//
 	// 3. updating the PKI database to include the server's certificate
-	scenario.Attach(scenario.MustNewStack(&netsim.StackConfig{
-		DomainNames:       []string{"dns.google"},
-		Addresses:         []string{"8.8.8.8"},
-		DNSOverUDPHandler: scenario.DNSHandler(),
-	}))
+	scenario.Attach(scenario.MustNewGoogleDNSStack())
 
 	// Create and attach the client stack.
-	clientStack := scenario.MustNewStack(&netsim.StackConfig{
-		Addresses: []string{"130.192.91.211"},
-	})
+	clientStack := scenario.MustNewClientStack()
 	scenario.Attach(clientStack)
 
 	// Create a context with a watchdog timeout.
