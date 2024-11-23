@@ -6,78 +6,51 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
-	"net/netip"
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/rbmk-project/x/connpool"
 	"github.com/rbmk-project/x/netsim"
 )
 
 // This example shows how to use [netsim] to simulate a DNS
 // server that listens for incoming requests over UDP.
 func Example_dnsOverUDP() {
-	// Create a pool to close resources when done.
-	cpool := connpool.New()
-	defer cpool.Close()
+	// Create a new scenario using the given directory to cache
+	// the certificates used by the simulated PKI
+	scenario := netsim.NewScenario("testdata")
+	defer scenario.Close()
 
-	// Create the server stack.
-	serverAddr := netip.MustParseAddr("8.8.8.8")
-	serverStack := netsim.NewStack(serverAddr)
-	cpool.Add(serverStack)
+	// Create server stack running a DNS-over-UDP server.
+	//
+	// This includes:
+	//
+	// 1. creating, attaching, and enabling routing for a server stack
+	//
+	// 2. registering the proper domain names and addresses
+	//
+	// 3. updating the PKI database to include the server's certificate
+	scenario.Attach(scenario.MustNewStack(&netsim.StackConfig{
+		DomainNames:       []string{"dns.google"},
+		Addresses:         []string{"8.8.8.8"},
+		DNSOverUDPHandler: scenario.DNSHandler(),
+	}))
 
-	// Create the client stack.
-	clientAddr := netip.MustParseAddr("130.192.91.211")
-	clientStack := netsim.NewStack(clientAddr)
-	cpool.Add(clientStack)
-
-	// Link the client and the server stacks.
-	link := netsim.NewLink(clientStack, serverStack)
-	cpool.Add(link)
+	// Create and attach the client stack.
+	clientStack := scenario.MustNewStack(&netsim.StackConfig{
+		Addresses: []string{"130.192.91.211"},
+	})
+	scenario.Attach(clientStack)
 
 	// Create a context with a watchdog timeout.
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// Create the server UDP listener.
-	serverEndpoint := netip.AddrPortFrom(serverAddr, 53)
-	serverConn, err := serverStack.ListenPacket(ctx, "udp", serverEndpoint.String())
-	if err != nil {
-		log.Fatal(err)
-	}
-	cpool.Add(serverConn)
-
-	// Start the server in the background.
-	serverDNS := &dns.Server{
-		PacketConn: serverConn,
-		Handler: dns.HandlerFunc(func(rw dns.ResponseWriter, query *dns.Msg) {
-			resp := &dns.Msg{}
-			resp.SetReply(query)
-			resp.Answer = append(resp.Answer, &dns.A{
-				Hdr: dns.RR_Header{
-					Name:     "dns.google.",
-					Rrtype:   dns.TypeA,
-					Class:    dns.ClassINET,
-					Ttl:      3600,
-					Rdlength: 0,
-				},
-				A: net.IPv4(8, 8, 8, 8),
-			})
-			if err := rw.WriteMsg(resp); err != nil {
-				log.Fatal(err)
-			}
-		}),
-	}
-	go serverDNS.ActivateAndServe()
-	defer serverDNS.Shutdown()
-
 	// Create the client connection with the DNS server.
-	conn, err := clientStack.DialContext(ctx, "udp", serverEndpoint.String())
+	conn, err := clientStack.DialContext(ctx, "udp", "8.8.8.8:53")
 	if err != nil {
 		log.Fatal(err)
 	}
-	cpool.Add(conn)
+	defer conn.Close()
 
 	// Create the query to send
 	query := new(dns.Msg)
@@ -102,9 +75,6 @@ func Example_dnsOverUDP() {
 			fmt.Printf("%s\n", a.A.String())
 		}
 	}
-
-	// Explicitly close the connections
-	cpool.Close()
 
 	// Output:
 	// 8.8.8.8
