@@ -4,7 +4,7 @@
 // Network stack
 //
 
-package netsim
+package netstack
 
 import (
 	"context"
@@ -49,10 +49,10 @@ type Stack struct {
 	ports map[PortAddr]*Port
 }
 
-// NewStack creates a new [*Stack] instance and starts a
+// New creates a new [*Stack] instance and starts a
 // goroutine demuxing incoming traffic. Remember to invoke
 // Close to stop any muxing/demuxing goroutine.
-func NewStack(addrs ...netip.Addr) *Stack {
+func New(addrs ...netip.Addr) *Stack {
 	const (
 		// firstEphemeralPort is the first ephemeral port
 		// to use according to RFC6335.

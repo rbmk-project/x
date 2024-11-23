@@ -4,7 +4,7 @@
 // Dialer implementation
 //
 
-package netsim
+package netstack
 
 import (
 	"context"

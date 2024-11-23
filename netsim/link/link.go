@@ -1,10 +1,7 @@
-//
 // SPDX-License-Identifier: GPL-3.0-or-later
-//
-// Packet and related definitions.
-//
 
-package netsim
+// Package link models a point-to-point network link.
+package link
 
 import (
 	"sync"
@@ -15,9 +12,12 @@ import (
 // LinkStack is the [*Stack] as seen by a [*Link].
 type LinkStack = packet.NetworkDevice
 
+// Packet is the [packet.Packet] alias used by this package.
+type Packet = packet.Packet
+
 // Link models a link between two [*Stack] instances.
 //
-// The zero value is not ready to use; construct using [NewLink].
+// The zero value is not ready to use; construct using [New].
 type Link struct {
 	// eof unblocks any blocking channel operation.
 	eof chan struct{}
@@ -26,10 +26,10 @@ type Link struct {
 	eofOnce sync.Once
 }
 
-// NewLink creates a new [*Link] using two [*Stack] and
+// New creates a new [*Link] using two [*Stack] and
 // sets up moving packets between the two stacks. Use Close
 // to shut down background goroutines.
-func NewLink(left, right LinkStack) *Link {
+func New(left, right LinkStack) *Link {
 	lnk := &Link{
 		eof:     make(chan struct{}),
 		eofOnce: sync.Once{},

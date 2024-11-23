@@ -4,7 +4,7 @@
 // Aliases for Packet and the related definitions.
 //
 
-package netsim
+package netstack
 
 import "github.com/rbmk-project/x/netsim/packet"
 

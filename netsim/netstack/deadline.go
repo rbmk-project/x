@@ -6,7 +6,7 @@
 // Deadline management.
 //
 
-package netsim
+package netstack
 
 import (
 	"sync"

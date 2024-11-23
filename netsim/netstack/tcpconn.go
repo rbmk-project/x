@@ -4,7 +4,7 @@
 // TCP Conn/PacketConn.
 //
 
-package netsim
+package netstack
 
 import (
 	"bytes"
