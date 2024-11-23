@@ -13,6 +13,8 @@ import (
 	"net"
 	"net/netip"
 	"sync"
+
+	"github.com/rbmk-project/common/runtimex"
 )
 
 // Stack models a network stack.
@@ -46,7 +48,17 @@ type Stack struct {
 // goroutine demuxing incoming traffic. Remember to invoke
 // Close to stop any muxing/demuxing goroutine.
 func NewStack(addrs ...netip.Addr) *Stack {
-	const firstEphemeralPort = 49152
+	const (
+		// outputBufSize adds some buffering to the output
+		// channel to allow for nonblocking writes of packets
+		// containing the RST flag in response to SYN for
+		// ports that aren't listening.
+		outputBufSize = 128
+
+		// firstEphemeralPort is the first ephemeral port
+		// to use according to RFC6335.
+		firstEphemeralPort = 49152
+	)
 	ns := &Stack{
 		addrs:   addrs,
 		eof:     make(chan struct{}),
@@ -56,7 +68,7 @@ func NewStack(addrs ...netip.Addr) *Stack {
 			IPProtocolTCP: firstEphemeralPort,
 			IPProtocolUDP: firstEphemeralPort,
 		},
-		output: make(chan *Packet),
+		output: make(chan *Packet, outputBufSize),
 		portmu: sync.RWMutex{},
 		ports:  map[PortAddr]*Port{},
 	}
@@ -151,6 +163,26 @@ func (ns *Stack) findPortLocked(pkt *Packet) *Port {
 	return nil
 }
 
+// resetNonblocking sends a RST packet in response to a SYN for a closed port.
+func (ns *Stack) resetNonblocking(pkt *Packet) {
+	runtimex.Assert(pkt.IPProtocol == IPProtocolTCP, "not a TCP packet")
+	runtimex.Assert(pkt.Flags != TCPFlagSYN, "expected SYN flags")
+	resp := &Packet{
+		SrcAddr:    pkt.DstAddr,
+		DstAddr:    pkt.SrcAddr,
+		IPProtocol: IPProtocolTCP,
+		SrcPort:    pkt.DstPort,
+		DstPort:    pkt.SrcPort,
+		Flags:      TCPFlagRST,
+		Payload:    []byte{},
+	}
+	// Nonblocking write to the buffered output channel.
+	select {
+	case ns.output <- resp:
+	default:
+	}
+}
+
 // demux demuxes a single incoming [*Packet].
 func (ns *Stack) demux(pkt *Packet) error {
 	// Discard packet if the address is not local.
@@ -164,7 +196,10 @@ func (ns *Stack) demux(pkt *Packet) error {
 	port := ns.findPortLocked(pkt)
 	ns.portmu.RUnlock()
 	if port == nil {
-		return EHOSTUNREACH
+		if pkt.IPProtocol == IPProtocolTCP && pkt.Flags == TCPFlagSYN {
+			ns.resetNonblocking(pkt)
+		}
+		return ECONNREFUSED
 	}
 
 	// Actually deliver the packet to the port.

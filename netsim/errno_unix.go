@@ -20,6 +20,9 @@ const (
 	// ECONNABORTED is the connection aborted error.
 	ECONNABORTED = unix.ECONNABORTED
 
+	// ECONNREFUSED is the connection refused error.
+	ECONNREFUSED = unix.ECONNREFUSED
+
 	// ECONNRESET is the connection reset by peer error.
 	ECONNRESET = unix.ECONNRESET
 

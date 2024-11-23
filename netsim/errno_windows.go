@@ -20,6 +20,9 @@ const (
 	// ECONNABORTED is the connection aborted error.
 	ECONNABORTED = windows.WSAECONNABORTED
 
+	// ECONNREFUSED is the connection refused error.
+	ECONNREFUSED = windows.WSAECONNREFUSED
+
 	// ECONNRESET is the connection reset by peer error.
 	ECONNRESET = windows.WSAECONNRESET
 
