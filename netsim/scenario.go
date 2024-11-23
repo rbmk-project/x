@@ -63,16 +63,27 @@ func (s *Scenario) RootCAs() *x509.CertPool {
 //
 // This method IS NOT goroutine safe.
 func (s *Scenario) MustNewStack(config *StackConfig) *Stack {
+	// Initialize and configure the stack.
 	runtimex.Try0(config.validate())
 	stack := runtimex.Try1(s.newBaseStack(config))
 	runtimex.Try0(config.setupClientResolvers(stack))
 	s.dnsd.AddFromConfig(config)
 	cert, hasCert := s.mustSetupPKI(config)
+
+	// Start DNS handlers.
 	if config.DNSOverUDPHandler != nil {
 		s.mustSetupDNSOverUDP(stack, config)
 	}
-	_ = cert
-	_ = hasCert
+
+	// Start HTTP handlers.
+	if config.HTTPHandler != nil {
+		s.mustSetupHTTPOverTCP(stack, config)
+	}
+	if config.HTTPSHandler != nil {
+		runtimex.Assert(hasCert, "no TLS certificate available")
+		s.mustSetupHTTPOverTLS(stack, config, cert)
+	}
+
 	s.pool.Add(stack)
 	return stack
 }

@@ -7,25 +7,38 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"net/http"
 	"net/netip"
 
+	"github.com/rbmk-project/common/runtimex"
 	"github.com/rbmk-project/dnscore/dnscoretest"
 	"github.com/rbmk-project/x/netsim/simpki"
 )
 
 // StackConfig contains configuration for creating a new network stack.
 type StackConfig struct {
-	// DomainNames contains the domain names associated with this stack.
-	DomainNames []string
-
 	// Addresses contains the IP addresses for this stack.
+	//
+	// The config is invalid if there is not at least one address.
 	Addresses []string
+
+	// ClientResolvers optionally specifies resolvers for client stacks.
+	ClientResolvers []string
 
 	// DNSOverUDPHandler optionally specifies a handler for DNS-over-UDP.
 	DNSOverUDPHandler DNSHandler
 
-	// ClientResolvers optionally specifies resolvers for client stacks.
-	ClientResolvers []string
+	// DomainNames contains the optional domain names associated with this stack.
+	//
+	// If there are associated domain names, we will configure the DNS and
+	// register related certificates for emulating the PKI.
+	DomainNames []string
+
+	// HTTPHandler optionally specifies a handle to use on port 80/tcp.
+	HTTPHandler http.Handler
+
+	// HTTPSHandler optionally specifies a handle to use on port 443/tcp.
+	HTTPSHandler http.Handler
 }
 
 // validate returns an error if the configuration is not valid.
@@ -93,4 +106,23 @@ func (s *Scenario) mustSetupDNSOverUDP(stack *Stack, cfg *StackConfig) {
 	}
 	<-server.StartUDP(cfg.DNSOverUDPHandler)
 	s.pool.Add(server)
+}
+
+// mustSetupHTTPOverTCP configures the HTTP-over-TCP handler for the stack.
+func (s *Scenario) mustSetupHTTPOverTCP(stack *Stack, cfg *StackConfig) {
+	listener := runtimex.Try1(stack.Listen(context.Background(), "tcp", "[::]:80"))
+	srv := &http.Server{Handler: cfg.HTTPHandler}
+	go srv.Serve(listener)
+}
+
+// mustSetupHTTPOverTLS configures the HTTP-over-TLS handler for the stack.
+func (s *Scenario) mustSetupHTTPOverTLS(stack *Stack, cfg *StackConfig, cert tls.Certificate) {
+	listener := runtimex.Try1(stack.Listen(context.Background(), "tcp", "[::]:443"))
+	srv := &http.Server{
+		Handler: cfg.HTTPSHandler,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		},
+	}
+	go srv.ServeTLS(listener, "", "")
 }
