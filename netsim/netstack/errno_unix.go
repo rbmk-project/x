@@ -6,7 +6,7 @@
 // UNIX errno definitions.
 //
 
-package netsim
+package netstack
 
 import "golang.org/x/sys/unix"
 

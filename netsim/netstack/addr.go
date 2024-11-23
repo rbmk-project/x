@@ -4,7 +4,7 @@
 // net.Addr implementation.
 //
 
-package netsim
+package netstack
 
 import (
 	"net"

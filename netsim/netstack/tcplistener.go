@@ -4,7 +4,7 @@
 // TCP Listener/PacketListener.
 //
 
-package netsim
+package netstack
 
 import (
 	"net"

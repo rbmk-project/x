@@ -4,7 +4,7 @@
 // TCP/UDP port implementation.
 //
 
-package netsim
+package netstack
 
 import (
 	"fmt"

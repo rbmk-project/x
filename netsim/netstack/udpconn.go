@@ -4,7 +4,7 @@
 // UDP Conn/PacketConn.
 //
 
-package netsim
+package netstack
 
 import "net"
 
