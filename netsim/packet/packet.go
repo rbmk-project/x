@@ -94,6 +94,9 @@ const (
 
 // Packet is a network packet.
 type Packet struct {
+	// TTL is the packet time to live.
+	TTL uint8
+
 	// SrcAddr is the source address.
 	SrcAddr netip.Addr
 
@@ -149,6 +152,10 @@ func (p *Packet) stringTCP() string {
 	)
 }
 
+// DefaultBufferChannel is the required buffering
+// for [NetworkDevice] channels.
+const DefaultBufferChannel = 128
+
 // NetworkDevice is a network device to read/write [*Packet].
 type NetworkDevice interface {
 	// Addresses returns the device addresses.
@@ -158,8 +165,20 @@ type NetworkDevice interface {
 	EOF() <-chan struct{}
 
 	// Input returns a channel to send [*Packet] to the device.
+	//
+	// The channel must have size >= [DefaultBufferChannel].
 	Input() chan<- *Packet
 
 	// Output returns a channel to receive [*Packet] from the device.
+	//
+	// The channel must have size >= [DefaultBufferChannel].
 	Output() <-chan *Packet
+}
+
+// NewNetworkDeviceIOChannels constructs two channels
+// with size == [DefaultBufferChannel].
+func NewNetworkDeviceIOChannels() (chan *Packet, chan *Packet) {
+	input := make(chan *Packet, DefaultBufferChannel)
+	output := make(chan *Packet, DefaultBufferChannel)
+	return input, output
 }

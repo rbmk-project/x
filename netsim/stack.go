@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/rbmk-project/common/runtimex"
+	"github.com/rbmk-project/x/netsim/packet"
 )
 
 // Stack models a network stack.
@@ -49,26 +50,27 @@ type Stack struct {
 // Close to stop any muxing/demuxing goroutine.
 func NewStack(addrs ...netip.Addr) *Stack {
 	const (
-		// outputBufSize adds some buffering to the output
-		// channel to allow for nonblocking writes of packets
-		// containing the RST flag in response to SYN for
-		// ports that aren't listening.
-		outputBufSize = 128
-
 		// firstEphemeralPort is the first ephemeral port
 		// to use according to RFC6335.
 		firstEphemeralPort = 49152
 	)
+	// We use buffered channels for I/O because that allows
+	// routers to use nonblocking writes w/o dropping packets
+	// unless the receiver is actively ignoring them.
+	//
+	// The buffer also allows us to send RST after SYN to
+	// closed port using nonblocking I/O.
+	input, output := packet.NewNetworkDeviceIOChannels()
 	ns := &Stack{
 		addrs:   addrs,
 		eof:     make(chan struct{}),
 		eofOnce: sync.Once{},
-		input:   make(chan *Packet),
+		input:   input,
 		nextport: map[IPProtocol]uint16{
 			IPProtocolTCP: firstEphemeralPort,
 			IPProtocolUDP: firstEphemeralPort,
 		},
-		output: make(chan *Packet, outputBufSize),
+		output: output,
 		portmu: sync.RWMutex{},
 		ports:  map[PortAddr]*Port{},
 	}
@@ -185,6 +187,11 @@ func (ns *Stack) resetNonblocking(pkt *Packet) {
 
 // demux demuxes a single incoming [*Packet].
 func (ns *Stack) demux(pkt *Packet) error {
+	// Discard packet if the TTL is zero.
+	if pkt.TTL <= 0 {
+		return EHOSTUNREACH
+	}
+
 	// Discard packet if the address is not local.
 	if !ns.isLocalAddr(pkt.DstAddr) {
 		return EHOSTUNREACH
