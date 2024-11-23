@@ -103,7 +103,7 @@ func (dd *dnsDatabase) Handle(rw dnscoretest.ResponseWriter, rawQuery []byte) {
 	}
 	response.SetReply(query)
 
-	// Answer the query and get RRs
+	// Get the RRs if possible
 	var (
 		q0   = query.Question[0]
 		name = dns.CanonicalName(q0.Name)

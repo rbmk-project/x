@@ -7,6 +7,7 @@ import (
 
 	"github.com/rbmk-project/common/runtimex"
 	"github.com/rbmk-project/x/connpool"
+	"github.com/rbmk-project/x/netsim/packet"
 	"github.com/rbmk-project/x/netsim/router"
 	"github.com/rbmk-project/x/netsim/simpki"
 )
@@ -81,9 +82,13 @@ func (s *Scenario) Close() error {
 	return s.pool.Close()
 }
 
-// Attach connects a stack to the scenario's central router.
+// Attach connects a device to the scenario's central router.
 //
-// All network traffic to/from this stack will flow through the router.
-func (s *Scenario) Attach(stack *Stack) {
-	s.router.Attach(stack)
+// The common case is to attach a [*Stack] but other cases are also
+// possible. Suppose a [*Stack] is linked to a firewall through a link,
+// then you can also attach the firewall to the router.
+//
+// All network traffic to/from this device will flow through the router.
+func (s *Scenario) Attach(dev packet.NetworkDevice) {
+	s.router.Attach(dev)
 }
