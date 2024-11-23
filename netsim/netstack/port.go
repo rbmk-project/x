@@ -221,7 +221,7 @@ func (gp *Port) WritePacket(payload []byte, flags TCPFlags, raddr netip.AddrPort
 		}
 	}
 
-	// Make sure the local addres is specified
+	// Make sure the local address is specified
 	laddr := gp.addr.LocalAddr
 	if laddr.Addr().IsUnspecified() {
 		ipAddr, err := gp.stack.FindLocalAddrFor(raddr.Addr())
