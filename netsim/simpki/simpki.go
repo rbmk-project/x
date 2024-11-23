@@ -29,24 +29,24 @@ type PKI struct {
 	pool     *x509.CertPool
 }
 
-// MustNewPKI constructs a new [*PKI] instance using
+// MustNew constructs a new [*PKI] instance using
 // the given filesystem directory to store the
 // certificates, to avoid regenerating them every
 // time we run integration tests.
 //
 // This function panics on failure.
-func MustNewPKI(cacheDir string) *PKI {
+func MustNew(cacheDir string) *PKI {
 	return &PKI{
 		cacheDir: cacheDir,
 		pool:     x509.NewCertPool(),
 	}
 }
 
-// PKICertConfig is an alias for [selfsignedcert.PKICertConfig].
-type PKICertConfig = selfsignedcert.Config
+// Config is an alias for [selfsignedcert.Config].
+type Config = selfsignedcert.Config
 
 // MustNewCert creates the certificate using the given
-// [*PKICertConfig] and using the cache directory
+// [*Config] and using the cache directory
 // to avoid regenerating the certificate every time.
 //
 // It returns the [tls.Certificate] to use in server code.
@@ -55,7 +55,7 @@ type PKICertConfig = selfsignedcert.Config
 // certificate pool you can get with [*PKI.CertPool].
 //
 // This function panics on failure.
-func (pki *PKI) MustNewCert(config *PKICertConfig) tls.Certificate {
+func (pki *PKI) MustNewCert(config *Config) tls.Certificate {
 	// ensure there are no race conditions with concurrent invocations
 	baseDir := filepath.Join(pki.cacheDir, "pkistore")
 	runtimex.Try0(os.MkdirAll(baseDir, 0700))

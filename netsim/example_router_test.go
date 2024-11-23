@@ -49,8 +49,8 @@ func Example_router() {
 	defer cancel()
 
 	// Create a PKI for the server and obtain the certificate.
-	pki := simpki.MustNewPKI("testdata")
-	serverCert := pki.MustNewCert(&simpki.PKICertConfig{
+	pki := simpki.MustNew("testdata")
+	serverCert := pki.MustNewCert(&simpki.Config{
 		CommonName: "dns.google",
 		DNSNames: []string{
 			"dns.google.com",
