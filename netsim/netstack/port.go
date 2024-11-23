@@ -42,6 +42,10 @@ func (pa *PortAddr) String() string {
 type PortStack interface {
 	// ClosePort closes the given port.
 	ClosePort(addr *PortAddr)
+
+	// FindLocalAddrFor finds the first local address with the
+	// same family of the given remote address.
+	FindLocalAddrFor(raddr netip.Addr) (netip.Addr, error)
 }
 
 // Port models an open TCP/UDP port.
@@ -217,16 +221,26 @@ func (gp *Port) WritePacket(payload []byte, flags TCPFlags, raddr netip.AddrPort
 		}
 	}
 
+	// Make sure the local addres is specified
+	laddr := gp.addr.LocalAddr
+	if laddr.Addr().IsUnspecified() {
+		ipAddr, err := gp.stack.FindLocalAddrFor(raddr.Addr())
+		if err != nil {
+			return err
+		}
+		laddr = netip.AddrPortFrom(ipAddr, laddr.Port())
+	}
+
 	// Build and send the packet.
 	//
 	// As documented, copy the payload.
 	const linuxDefaultTTL = 64
 	pkt := &Packet{
 		TTL:        linuxDefaultTTL,
-		SrcAddr:    gp.addr.LocalAddr.Addr(),
+		SrcAddr:    laddr.Addr(),
 		DstAddr:    raddr.Addr(),
 		IPProtocol: gp.addr.Protocol,
-		SrcPort:    gp.addr.LocalAddr.Port(),
+		SrcPort:    laddr.Port(),
 		DstPort:    raddr.Port(),
 		Flags:      flags,
 		Payload:    append([]byte{}, payload...),
