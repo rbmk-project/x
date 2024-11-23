@@ -13,6 +13,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/miekg/dns"
 	"github.com/rbmk-project/x/connpool"
 	"github.com/rbmk-project/x/netsim"
 	"github.com/rbmk-project/x/netsim/router"
@@ -61,9 +62,47 @@ func Example_router() {
 		},
 	})
 
+	// TODO(bassosimone): we need support for creating servers
+	// in a much more simpler and user friendly way.
+
+	// Create the server UDP listener.
+	serverEndpointDNS := netip.AddrPortFrom(serverAddr, 53)
+	serverConn, err := serverStack.ListenPacket(ctx, "udp", serverEndpointDNS.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+	cpool.Add(serverConn)
+
+	// Start the server in the background.
+	serverDNS := &dns.Server{
+		PacketConn: serverConn,
+		Handler: dns.HandlerFunc(func(rw dns.ResponseWriter, query *dns.Msg) {
+			resp := &dns.Msg{}
+			resp.SetReply(query)
+			resp.Answer = append(resp.Answer, &dns.A{
+				Hdr: dns.RR_Header{
+					Name:     "dns.google.",
+					Rrtype:   dns.TypeA,
+					Class:    dns.ClassINET,
+					Ttl:      3600,
+					Rdlength: 0,
+				},
+				A: net.IPv4(8, 8, 8, 8),
+			})
+			if err := rw.WriteMsg(resp); err != nil {
+				log.Fatal(err)
+			}
+		}),
+	}
+	go serverDNS.ActivateAndServe()
+	defer serverDNS.Shutdown()
+
+	// Make sure the client knows about the DNS server.
+	clientStack.SetResolvers(serverEndpointDNS)
+
 	// Create the HTTP server.
-	serverEndpoint := netip.AddrPortFrom(serverAddr, 443)
-	listener, err := serverStack.Listen(ctx, "tcp", serverEndpoint.String())
+	serverEndpointHTTPS := netip.AddrPortFrom(serverAddr, 443)
+	listener, err := serverStack.Listen(ctx, "tcp", serverEndpointHTTPS.String())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,7 +135,7 @@ func Example_router() {
 	clientHTTP := &http.Client{Transport: clientTxp}
 
 	// Get the response body.
-	resp, err := clientHTTP.Get("https://8.8.8.8/")
+	resp, err := clientHTTP.Get("https://dns.google/")
 	if err != nil {
 		log.Fatal(err)
 	}
