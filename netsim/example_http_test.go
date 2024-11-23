@@ -9,52 +9,40 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/netip"
-	"time"
 
-	"github.com/rbmk-project/x/connpool"
 	"github.com/rbmk-project/x/netsim"
 )
 
 // This example shows how to use [netsim] to simulate an HTTP
 // server that listens for incoming cleartext requests.
 func Example_http() {
-	// Create a pool to close resources when done.
-	cpool := connpool.New()
-	defer cpool.Close()
+	// Create a new scenario using the given directory to cache
+	// the certificates used by the simulated PKI
+	scenario := netsim.NewScenario("testdata")
+	defer scenario.Close()
 
-	// Create the server stack.
-	serverAddr := netip.MustParseAddr("8.8.8.8")
-	serverStack := netsim.NewStack(serverAddr)
-	cpool.Add(serverStack)
-
-	// Create the client stack.
-	clientAddr := netip.MustParseAddr("130.192.91.211")
-	clientStack := netsim.NewStack(clientAddr)
-	cpool.Add(clientStack)
-
-	// Link the client and the server stacks.
-	link := netsim.NewLink(clientStack, serverStack)
-	cpool.Add(link)
-
-	// Create a context with a watchdog timeout.
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	// Create the HTTP server.
-	serverEndpoint := netip.AddrPortFrom(serverAddr, 80)
-	listener, err := serverStack.Listen(ctx, "tcp", serverEndpoint.String())
-	if err != nil {
-		log.Fatal(err)
-	}
-	cpool.Add(listener)
-	serverHTTP := &http.Server{
-		Handler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	// Create server stack running a HTTP-over-TCP server.
+	//
+	// This includes:
+	//
+	// 1. creating, attaching, and enabling routing for a server stack
+	//
+	// 2. registering the proper domain names and addresses
+	//
+	// 3. updating the PKI database to include the server's certificate
+	scenario.Attach(scenario.MustNewStack(&netsim.StackConfig{
+		DomainNames: []string{"dns.google"},
+		Addresses:   []string{"8.8.8.8"},
+		HTTPHandler: http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			rw.Write([]byte("Bonsoir, Elliot!\n"))
 		}),
-	}
-	go serverHTTP.Serve(listener)
-	cpool.Add(serverHTTP)
+	}))
+
+	// Create and attach the client stack.
+	clientStack := scenario.MustNewStack(&netsim.StackConfig{
+		Addresses: []string{"130.192.91.211"},
+	})
+	scenario.Attach(clientStack)
 
 	// Create the HTTP client
 	clientTxp := &http.Transport{
@@ -63,10 +51,10 @@ func Example_http() {
 			if err != nil {
 				return nil, err
 			}
-			cpool.Add(conn)
 			return conn, nil
 		},
 	}
+	defer clientTxp.CloseIdleConnections()
 	clientHTTP := &http.Client{Transport: clientTxp}
 
 	// Get the response body.
@@ -77,7 +65,7 @@ func Example_http() {
 	if resp.StatusCode != http.StatusOK {
 		log.Fatalf("HTTP request failed: %d", resp.StatusCode)
 	}
-	cpool.Add(resp.Body)
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
@@ -85,9 +73,6 @@ func Example_http() {
 
 	// Print the response body
 	fmt.Printf("%s", string(body))
-
-	// Explicitly close the connections
-	cpool.Close()
 
 	// Output:
 	// Bonsoir, Elliot!
