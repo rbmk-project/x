@@ -9,9 +9,9 @@ import (
 	"net/http"
 )
 
-// NewTransport creates an [*http.Transport] configured to use the
+// NewHTTPTransport creates an [*http.Transport] configured to use the
 // given stack and the scenario's root CAs.
-func (s *Scenario) NewTransport(stack *Stack) *http.Transport {
+func (s *Scenario) NewHTTPTransport(stack *Stack) *http.Transport {
 	return &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return stack.DialContext(ctx, network, addr)

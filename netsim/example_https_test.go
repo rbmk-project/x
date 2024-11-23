@@ -43,7 +43,7 @@ func Example_https() {
 	scenario.Attach(clientStack)
 
 	// Create the HTTP client
-	clientTxp := scenario.NewTransport(clientStack)
+	clientTxp := scenario.NewHTTPTransport(clientStack)
 	defer clientTxp.CloseIdleConnections()
 	clientHTTP := &http.Client{Transport: clientTxp}
 
