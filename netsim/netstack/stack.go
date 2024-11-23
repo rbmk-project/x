@@ -361,17 +361,9 @@ func (ns *Stack) dial(protocol IPProtocol, address string) (*Port, error) {
 	}
 
 	// Pick the correct local address for the remote address.
-	var ipAddrLocal netip.Addr
-	for _, addr := range ns.addrs {
-		if raddr.Addr().Is4() && addr.Is4() {
-			ipAddrLocal = addr
-			break
-		}
-		ipAddrLocal = addr
-		break
-	}
-	if !ipAddrLocal.IsValid() {
-		return nil, EADDRNOTAVAIL
+	ipAddrLocal, err := ns.FindLocalAddrFor(raddr.Addr())
+	if err != nil {
+		return nil, err
 	}
 
 	// Construct the local address and use a local port.
@@ -383,6 +375,39 @@ func (ns *Stack) dial(protocol IPProtocol, address string) (*Port, error) {
 
 	// Create the port proper and setup muxing traffic.
 	return ns.newPortLocked(protocol, laddr, raddr)
+}
+
+// FindLocalAddrFor returns the first local address that has
+// the same IP version as the remote address.
+func (ns *Stack) FindLocalAddrFor(raddr netip.Addr) (netip.Addr, error) {
+	// Normalize to IPv4 if mapped.
+	if raddr.Is4In6() {
+		raddr = raddr.Unmap()
+	}
+
+	var result netip.Addr
+	for _, addr := range ns.addrs {
+		// Normalize to IPv4 if mapped.
+		if addr.Is4In6() {
+			addr = addr.Unmap()
+		}
+
+		// Check for exact match with address family
+		if raddr.Is4() && addr.Is4() {
+			result = addr
+			break
+		}
+		if raddr.Is6() && addr.Is6() {
+			result = addr
+			break
+		}
+	}
+
+	// Produce the final result.
+	if !result.IsValid() {
+		return netip.Addr{}, EADDRNOTAVAIL
+	}
+	return result, nil
 }
 
 // newEphemeralPortNumberLocked opens a new local port, if possible, or returns an error.
