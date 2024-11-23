@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/rbmk-project/common/runtimex"
+	"github.com/rbmk-project/dnscore"
 	"github.com/rbmk-project/x/netsim/packet"
 )
 
@@ -40,6 +41,9 @@ type Stack struct {
 
 	// portmu protects nextport and ports.
 	portmu sync.RWMutex
+
+	// resolvers contains the DNS resolvers to use.
+	resolvers []*dnscore.ServerAddr
 
 	// ports contains the open ports.
 	ports map[PortAddr]*Port
@@ -76,6 +80,19 @@ func NewStack(addrs ...netip.Addr) *Stack {
 	}
 	go ns.demuxLoop()
 	return ns
+}
+
+// SetResolvers sets the resolvers endpoints to use.
+//
+// Note that this method IS NOT goroutine safe.
+func (ns *Stack) SetResolvers(addrs ...netip.AddrPort) {
+	ns.resolvers = nil
+	for _, addr := range addrs {
+		ns.resolvers = append(ns.resolvers, &dnscore.ServerAddr{
+			Protocol: dnscore.ProtocolUDP,
+			Address:  addr.String(),
+		})
+	}
 }
 
 // Addresses returns the network stack addresses.
@@ -260,8 +277,9 @@ func (ns *Stack) Listen(ctx context.Context, network, address string) (net.Liste
 	return NewTCPListener(ns, port), nil
 }
 
-// DialContext dials a network address.
-func (ns *Stack) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+// dialContext is the internal function to dial that only accepts
+// addresses containing IPv4 or IPv6 addresses and a port.
+func (ns *Stack) dialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	switch network {
 	case "udp":
 		port, err := ns.dial(IPProtocolUDP, address)
