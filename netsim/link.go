@@ -7,7 +7,6 @@
 package netsim
 
 import (
-	"log"
 	"sync"
 
 	"github.com/rbmk-project/x/netsim/packet"
@@ -68,7 +67,6 @@ func (lnk *Link) move(left readableStack, right writableStack) {
 		case pkt := <-left.Output():
 
 			// Write to right stack.
-			log.Printf("INFLIGHT %s", pkt)
 			select {
 			case <-lnk.eof:
 				return
@@ -77,7 +75,6 @@ func (lnk *Link) move(left readableStack, right writableStack) {
 			case right.Input() <- pkt:
 				// success
 			}
-
 		}
 	}
 }

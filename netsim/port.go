@@ -220,7 +220,9 @@ func (gp *Port) WritePacket(payload []byte, flags TCPFlags, raddr netip.AddrPort
 	// Build and send the packet.
 	//
 	// As documented, copy the payload.
+	const linuxDefaultTTL = 64
 	pkt := &Packet{
+		TTL:        linuxDefaultTTL,
 		SrcAddr:    gp.addr.LocalAddr.Addr(),
 		DstAddr:    raddr.Addr(),
 		IPProtocol: gp.addr.Protocol,
