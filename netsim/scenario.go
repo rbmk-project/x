@@ -67,7 +67,7 @@ func (s *Scenario) MustNewStack(config *StackConfig) *Stack {
 	runtimex.Try0(config.validate())
 	stack := runtimex.Try1(s.newBaseStack(config))
 	runtimex.Try0(config.setupClientResolvers(stack))
-	s.dnsd.AddFromConfig(config)
+	s.dnsd.AddAddresses(config.DomainNames, config.Addresses)
 	cert, hasCert := s.mustSetupPKI(config)
 
 	// Start DNS handlers.
