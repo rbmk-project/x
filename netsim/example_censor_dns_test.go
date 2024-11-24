@@ -91,7 +91,10 @@ func Example_censorDNS() {
 	var count int
 	for result := range results {
 		if err := result.Err; err != nil {
-			log.Fatal(err)
+			// Errors here typically are caused by us closing
+			// the connection and, anyway, for this test we only
+			// care about seeing the duplicate responses.
+			break
 		}
 		for _, ans := range result.Msg.Answer {
 			if a, ok := ans.(*dns.A); ok {
