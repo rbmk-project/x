@@ -6,6 +6,7 @@ package router
 import (
 	"errors"
 	"net/netip"
+	"sync"
 
 	"github.com/rbmk-project/x/netsim/packet"
 )
@@ -15,6 +16,12 @@ type Router struct {
 	// devs tracks attached [packet.NetworkDevice].
 	devs []packet.NetworkDevice
 
+	// filtermu protects access to filters.
+	filtermu sync.RWMutex
+
+	// filters contains pre-routing packet filters.
+	filters []packet.Filter
+
 	// srt is the static routing table.
 	srt map[netip.Addr]packet.NetworkDevice
 }
@@ -22,9 +29,18 @@ type Router struct {
 // New creates a new [*Router].
 func New() *Router {
 	return &Router{
-		devs: make([]packet.NetworkDevice, 0),
-		srt:  make(map[netip.Addr]packet.NetworkDevice),
+		devs:     make([]packet.NetworkDevice, 0),
+		filtermu: sync.RWMutex{},
+		filters:  make([]packet.Filter, 0),
+		srt:      make(map[netip.Addr]packet.NetworkDevice),
 	}
+}
+
+// AddFilter adds a packet filter to the router.
+func (r *Router) AddFilter(pf packet.Filter) {
+	r.filtermu.Lock()
+	r.filters = append(r.filters, pf)
+	r.filtermu.Unlock()
 }
 
 // Attach attaches a [packet.NetworkDevice] to the [*Router].
@@ -47,9 +63,39 @@ func (r *Router) readLoop(dev packet.NetworkDevice) {
 		case <-dev.EOF():
 			return
 		case pkt := <-dev.Output():
-			r.route(pkt)
+			r.handle(pkt)
 		}
 	}
+}
+
+// handle handles a packet by applying filters and routing it.
+func (r *Router) handle(pkt *packet.Packet) error {
+	// Get a consistent view of filters
+	r.filtermu.RLock()
+	filters := make([]packet.Filter, len(r.filters))
+	copy(filters, r.filters)
+	r.filtermu.RUnlock()
+
+	// Apply filters
+	for _, pf := range filters {
+		target, inject := pf.Filter(pkt)
+
+		// Handle any packets to inject
+		for _, p := range inject {
+			_ = r.route(p)
+		}
+
+		// Stop processing if packet should be dropped
+		switch target {
+		case packet.DROP:
+			return nil
+		default:
+			// Continue processing
+		}
+	}
+
+	// Route the original packet if it wasn't dropped
+	return r.route(pkt)
 }
 
 var (
@@ -77,7 +123,7 @@ func (r *Router) route(pkt *packet.Packet) error {
 		return errNoRouteToHost
 	}
 
-	// Forward packet (non-blocking)
+	// Forward packet (non-blocking).
 	select {
 	case nextHop.Input() <- pkt:
 		return nil
