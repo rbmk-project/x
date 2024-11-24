@@ -46,6 +46,11 @@ func NewScenario(cacheDir string) *Scenario {
 	}
 }
 
+// Router returns the [*router.Router] for the scenario.
+func (s *Scenario) Router() *router.Router {
+	return s.router
+}
+
 // DNSHandler returns the [DNSHandler] for the scenario. The returned
 // handler will serve queries based on the scenario's DNS database.
 func (s *Scenario) DNSHandler() DNSHandler {
