@@ -117,7 +117,7 @@ func (dd *Database) Handle(rw dnscoretest.ResponseWriter, rawQuery []byte) {
 		q0.Qtype == dns.TypeAAAA ||
 		q0.Qtype == dns.TypeCNAME:
 		var found bool
-		response.Answer, found = dd.lookup(q0.Qtype, name)
+		response.Answer, found = dd.Lookup(q0.Qtype, name)
 		if !found {
 			response.Rcode = dns.RcodeNameError
 		}
@@ -133,11 +133,11 @@ func (dd *Database) Handle(rw dnscoretest.ResponseWriter, rawQuery []byte) {
 	rw.Write(rawResp)
 }
 
-// lookup returns the DNS records for a domain name.
+// Lookup returns the DNS records for a domain name.
 //
 // This method is goroutine safe as long as one does not
 // modify the database while handling queries.
-func (dd *Database) lookup(qtype uint16, name string) ([]dns.RR, bool) {
+func (dd *Database) Lookup(qtype uint16, name string) ([]dns.RR, bool) {
 	const maxloops = 10
 	var rrs []dns.RR
 	for idx := 0; idx < maxloops; idx++ {
