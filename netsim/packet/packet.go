@@ -182,3 +182,34 @@ func NewNetworkDeviceIOChannels() (chan *Packet, chan *Packet) {
 	output := make(chan *Packet, DefaultBufferChannel)
 	return input, output
 }
+
+// Target represents what to do with a [*Packet]
+// similarly to `iptables` target.
+type Target int
+
+const (
+	// ACCEPT lets the [*Packet] continue through the chain.
+	ACCEPT Target = iota
+
+	// DROP silently discards the [*Packet].
+	DROP
+)
+
+// Filter processes [*Packet] and determines its fate.
+//
+// The Filter method returns the [Target] and optionally
+// a list of new packets to inject.
+type Filter interface {
+	Filter(pkt *Packet) (Target, []*Packet)
+}
+
+// FilterFunc allows using a function as a [Filter].
+type FilterFunc func(pkt *Packet) (Target, []*Packet)
+
+// Ensure [FilterFunc] implements the [Filter] interface.
+var _ Filter = FilterFunc(nil)
+
+// Filter implements the [Filter] interface.
+func (fx FilterFunc) Filter(p *Packet) (Target, []*Packet) {
+	return fx(p)
+}
