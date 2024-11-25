@@ -37,14 +37,14 @@ func (p *Pool) Add(conn io.Closer) {
 func (p *Pool) Close() error {
 	// Lock and copy the [io.Closer] to close.
 	p.mu.Lock()
-	conns := p.handles
+	handles := p.handles
 	p.handles = nil
 	p.mu.Unlock()
 
 	// Close all the [io.Closer].
 	var errv []error
-	for _, conn := range slices.Backward(conns) {
-		if err := conn.Close(); err != nil {
+	for _, handle := range slices.Backward(handles) {
+		if err := handle.Close(); err != nil {
 			errv = append(errv, err)
 		}
 	}
