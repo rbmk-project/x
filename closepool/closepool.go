@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Package connpool contains a pool of connections.
-package connpool
+// Package closepool allows pooling [io.Closer] instances
+// and closing them in a single operation.
+package closepool
 
 import (
 	"errors"
@@ -10,42 +11,37 @@ import (
 	"sync"
 )
 
-// Pool is a pool of connections.
+// Pool allows pooling a set of [io.Closer].
 //
-// Construct using [New].
+// The zero value is ready to use.
 type Pool struct {
-	// conns contains the connections to close.
-	conns []io.Closer
+	// handles contains the [io.Closer] to close.
+	handles []io.Closer
 
 	// mu provides mutual exclusion.
 	mu sync.Mutex
 }
 
-// New constructs a new [*Pool] instance.
-func New() *Pool {
-	return &Pool{}
-}
-
-// Add adds a given [net.Conn] to the pool.
+// Add adds a given [io.Closer] to the pool.
 func (p *Pool) Add(conn io.Closer) {
 	p.mu.Lock()
-	p.conns = append(p.conns, conn)
+	p.handles = append(p.handles, conn)
 	p.mu.Unlock()
 }
 
-// Close closes all the connections inside the pool iterating
+// Close closes all the [io.Closer] inside the pool iterating
 // in backward order. Therefore, if one registers a TCP connection
 // and then the corresponding TLS connection, the TLS connection
 // is closed first. The returned error is the join of all the
 // errors that occurred when closing connections.
 func (p *Pool) Close() error {
-	// Lock and copy the connections to close.
+	// Lock and copy the [io.Closer] to close.
 	p.mu.Lock()
-	conns := p.conns
-	p.conns = nil
+	conns := p.handles
+	p.handles = nil
 	p.mu.Unlock()
 
-	// Close all the connections.
+	// Close all the [io.Closer].
 	var errv []error
 	for _, conn := range slices.Backward(conns) {
 		if err := conn.Close(); err != nil {

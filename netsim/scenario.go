@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 
 	"github.com/rbmk-project/common/runtimex"
-	"github.com/rbmk-project/x/connpool"
+	"github.com/rbmk-project/x/closepool"
 	"github.com/rbmk-project/x/netsim/packet"
 	"github.com/rbmk-project/x/netsim/router"
 	"github.com/rbmk-project/x/netsim/simpki"
@@ -28,7 +28,7 @@ type Scenario struct {
 	pki *simpki.PKI
 
 	// pool tracks all that which needs to be closed.
-	pool *connpool.Pool
+	pool *closepool.Pool
 
 	// router is the star-topology router.
 	router *router.Router
@@ -41,7 +41,7 @@ func NewScenario(cacheDir string) *Scenario {
 	return &Scenario{
 		dnsd:   newDNSDatabase(),
 		pki:    simpki.MustNew(cacheDir),
-		pool:   connpool.New(),
+		pool:   &closepool.Pool{},
 		router: router.New(),
 	}
 }
