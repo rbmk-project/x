@@ -35,7 +35,7 @@ func (ns *Stack) DialContext(ctx context.Context, network, address string) (net.
 	}
 
 	// Configure dnscore and netcore to perform the actual dial.
-	netx := netcore.NewNetwork()
+	netx := &netcore.Network{}
 	netx.DialContextFunc = ns.dialContext
 	reso := &dnscore.Resolver{}
 	reso.Config = dnscore.NewConfig()

@@ -16,7 +16,7 @@ import (
 
 // Network allows dialing and measuring TCP/UDP/TLS connections.
 //
-// Construct using [NewNetwork].
+// The zero value is ready to use.
 //
 // A [*Network] is safe for concurrent use by multiple goroutines as long as
 // you don't modify its fields after construction and the underlying fields you
@@ -55,13 +55,8 @@ type Network struct {
 	WrapConn func(ctx context.Context, netx *Network, conn net.Conn) net.Conn
 }
 
-// NewNetwork constructs a new [*Network] with default settings.
-func NewNetwork() *Network {
-	return &Network{}
-}
-
 // DefaultNetwork is the default [*Network] used by this package.
-var DefaultNetwork = NewNetwork()
+var DefaultNetwork = &Network{}
 
 // timeNow is a function that returns the current time.
 func (nx *Network) timeNow() time.Time {
