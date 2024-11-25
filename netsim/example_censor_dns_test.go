@@ -67,7 +67,7 @@ func Example_censorDNS() {
 	}
 
 	// Configure transport to use our simulated network
-	txp := dnscore.NewTransport()
+	txp := &dnscore.Transport{}
 	txp.DialContext = clientStack.DialContext
 
 	// Query 8.8.8.8 over UDP and collect responses
