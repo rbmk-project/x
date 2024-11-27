@@ -45,8 +45,7 @@ func (s *Scenario) MustNewExampleComStack() *Stack {
 			"2606:2800:21f:cb07:6820:80da:af6b:8b2c",
 			"93.184.216.34",
 		},
-		HTTPHandler:  handler,
-		HTTPSHandler: handler,
+		HTTPHandler: handler,
 	})
 }
 
@@ -69,5 +68,26 @@ func (s *Scenario) MustNewClientStack() *Stack {
 			"2001:4860:4860::8888",
 			"8.8.8.8",
 		},
+	})
+}
+
+// MustNewBlockpageStack creates a new stack simulating a censorship blockpage server.
+//
+// It serves a simple warning page on HTTP/HTTPS indicating that the content has been blocked.
+func (s *Scenario) MustNewBlockpageStack() *Stack {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Access to this website has been blocked by network policy.\n"))
+	})
+
+	return s.MustNewStack(&StackConfig{
+		DomainNames: []string{
+			"block.invalid", // Using .invalid TLD to avoid conflicts
+		},
+		Addresses: []string{
+			"10.10.34.35", // RFC1918 private address for blockpage server
+		},
+		HTTPHandler:  handler,
+		HTTPSHandler: handler,
 	})
 }
