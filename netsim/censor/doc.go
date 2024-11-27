@@ -28,9 +28,9 @@ SNI+endpoint based blocking, which is another common censorship case.
 
 The [*Blackholer] type implements connection blackholing with optional pattern
 matching. Once triggered, it blocks all packets for the matching connection
-for a configurable duration. This models censors that completely block specific
-traffic patterns or endpoints, causing timeouts. In addition, this filter can
-remember the blocked five tuples, thus causing residual censorship effects.
+for a configurable duration, causing residual five-tuple censorship. This models
+censors that completely block specific traffic patterns or endpoints, causing
+I/O timeouts.
 
 # Destination NAT
 
