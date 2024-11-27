@@ -11,7 +11,7 @@ censorship techniques while remaining simple enough for testing purposes.
 
 # DNS Response Injection
 
-The [*DNSPoisoner]* type implements GFW-style DNS poisoning by injecting spoofed
+The [*DNSPoisoner] type implements GFW-style DNS poisoning by injecting spoofed
 responses. It can target specific resolvers and is based on a database of poisoned
 responses to inject. Legitimate responses are allowed to pass through, thus the
 client is expected to receive multiple responses for each censored query.
