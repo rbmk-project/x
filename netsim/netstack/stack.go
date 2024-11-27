@@ -185,7 +185,7 @@ func (ns *Stack) findPortLocked(pkt *Packet) *Port {
 // resetNonblocking sends a RST packet in response to a SYN for a closed port.
 func (ns *Stack) resetNonblocking(pkt *Packet) {
 	runtimex.Assert(pkt.IPProtocol == IPProtocolTCP, "not a TCP packet")
-	runtimex.Assert(pkt.Flags != TCPFlagSYN, "expected SYN flags")
+	runtimex.Assert(pkt.Flags == TCPFlagSYN, "expected SYN flags")
 	resp := &Packet{
 		SrcAddr:    pkt.DstAddr,
 		DstAddr:    pkt.SrcAddr,
