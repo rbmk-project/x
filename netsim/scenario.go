@@ -82,6 +82,10 @@ func (s *Scenario) MustNewStack(config *StackConfig) *Stack {
 	if config.DNSOverTCPHandler != nil {
 		s.mustSetupDNSOverTCP(stack, config)
 	}
+	if config.DNSOverTLSHandler != nil {
+		runtimex.Assert(hasCert, "no TLS certificate available")
+		s.mustSetupDNSOverTLS(stack, config, cert)
+	}
 
 	// Start HTTP handlers.
 	if config.HTTPHandler != nil {

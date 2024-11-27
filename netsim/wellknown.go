@@ -25,6 +25,7 @@ func (s *Scenario) MustNewGoogleDNSStack() *Stack {
 		},
 		DNSOverUDPHandler: s.DNSHandler(),
 		DNSOverTCPHandler: s.DNSHandler(),
+		DNSOverTLSHandler: s.DNSHandler(),
 		HTTPHandler:       handler,
 		HTTPSHandler:      handler,
 	})

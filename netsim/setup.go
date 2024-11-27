@@ -31,6 +31,9 @@ type StackConfig struct {
 	// DNSOverTCPHandler optionally specifies a handler for DNS-over-TCP.
 	DNSOverTCPHandler DNSHandler
 
+	// DNSOverTLSHandler optionally specifies a handler for DNS-over-TLS.
+	DNSOverTLSHandler DNSHandler
+
 	// DomainNames contains the optional domain names associated with this stack.
 	//
 	// If there are associated domain names, we will configure the DNS and
@@ -118,6 +121,24 @@ func (s *Scenario) mustSetupDNSOverTCP(stack *Stack, cfg *StackConfig) {
 		},
 	}
 	<-server.StartTCP(cfg.DNSOverTCPHandler)
+	s.pool.Add(server)
+}
+
+// mustSetupDNSOverTLS configures the DNS-over-TLS handler for the stack.
+func (s *Scenario) mustSetupDNSOverTLS(stack *Stack, cfg *StackConfig, cert tls.Certificate) {
+	server := &dnscoretest.Server{
+		ListenTLS: func(network, address string, config *tls.Config) (net.Listener, error) {
+			listener, err := stack.Listen(context.Background(), network, "[::]:853")
+			if err != nil {
+				return nil, err
+			}
+			config = config.Clone()
+			config.Certificates = []tls.Certificate{cert}
+			listener = tls.NewListener(listener, config)
+			return listener, nil
+		},
+	}
+	<-server.StartTLS(cfg.DNSOverTCPHandler)
 	s.pool.Add(server)
 }
 
