@@ -28,6 +28,9 @@ type StackConfig struct {
 	// DNSOverUDPHandler optionally specifies a handler for DNS-over-UDP.
 	DNSOverUDPHandler DNSHandler
 
+	// DNSOverTCPHandler optionally specifies a handler for DNS-over-TCP.
+	DNSOverTCPHandler DNSHandler
+
 	// DomainNames contains the optional domain names associated with this stack.
 	//
 	// If there are associated domain names, we will configure the DNS and
@@ -104,6 +107,17 @@ func (s *Scenario) mustSetupDNSOverUDP(stack *Stack, cfg *StackConfig) {
 		},
 	}
 	<-server.StartUDP(cfg.DNSOverUDPHandler)
+	s.pool.Add(server)
+}
+
+// mustSetupDNSOverTCP configures the DNS-over-TCP handler for the stack.
+func (s *Scenario) mustSetupDNSOverTCP(stack *Stack, cfg *StackConfig) {
+	server := &dnscoretest.Server{
+		Listen: func(network, address string) (net.Listener, error) {
+			return stack.Listen(context.Background(), network, "[::]:53")
+		},
+	}
+	<-server.StartTCP(cfg.DNSOverTCPHandler)
 	s.pool.Add(server)
 }
 
