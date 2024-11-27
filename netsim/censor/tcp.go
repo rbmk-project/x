@@ -42,13 +42,13 @@ func NewTCPResetter(target netip.AddrPort, pattern []byte) *TCPResetter {
 func (r *TCPResetter) Filter(pkt *packet.Packet) (packet.Target, []*packet.Packet) {
 	// Only process TCP packets
 	if pkt.IPProtocol != packet.IPProtocolTCP {
-		return packet.ACCEPT, nil
+		return packet.CONTINUE, nil
 	}
 
 	// Check if we need to filter a specific endpoint
 	if r.target.IsValid() {
 		if pkt.DstAddr != r.target.Addr() || pkt.DstPort != r.target.Port() {
-			return packet.ACCEPT, nil
+			return packet.CONTINUE, nil
 		}
 	}
 
@@ -57,7 +57,7 @@ func (r *TCPResetter) Filter(pkt *packet.Packet) (packet.Target, []*packet.Packe
 	// handshake to complete before potentially injecting RST.
 	if r.pattern != nil {
 		if len(pkt.Payload) <= 0 || !bytes.Contains(pkt.Payload, r.pattern) {
-			return packet.ACCEPT, nil
+			return packet.CONTINUE, nil
 		}
 	}
 
@@ -72,5 +72,5 @@ func (r *TCPResetter) Filter(pkt *packet.Packet) (packet.Target, []*packet.Packe
 		Flags:      packet.TCPFlagRST,
 	}
 
-	return packet.ACCEPT, []*packet.Packet{rst}
+	return packet.CONTINUE, []*packet.Packet{rst}
 }

@@ -33,33 +33,33 @@ func NewDNSPoisoner(db *Database, addrs ...netip.Addr) *DNSPoisoner {
 func (p *DNSPoisoner) Filter(pkt *packet.Packet) (packet.Target, []*packet.Packet) {
 	// Only process UDP DNS queries
 	if pkt.IPProtocol != packet.IPProtocolUDP || pkt.DstPort != 53 {
-		return packet.ACCEPT, nil
+		return packet.CONTINUE, nil
 	}
 
 	// Check whether we should only filter
 	// specific network addresses
 	if len(p.addrs) > 0 {
 		if _, ok := p.addrs[pkt.DstAddr]; !ok {
-			return packet.ACCEPT, nil
+			return packet.CONTINUE, nil
 		}
 	}
 
 	// Parse DNS query
 	query := new(dns.Msg)
 	if err := query.Unpack(pkt.Payload); err != nil {
-		return packet.ACCEPT, nil
+		return packet.CONTINUE, nil
 	}
 
 	// Only process queries
 	if query.Response || len(query.Question) != 1 {
-		return packet.ACCEPT, nil
+		return packet.CONTINUE, nil
 	}
 
 	// Create poisoned response
 	spoofed := p.spoof(pkt, query)
 
 	// Let original query continue
-	return packet.ACCEPT, spoofed
+	return packet.CONTINUE, spoofed
 }
 
 func (p *DNSPoisoner) spoof(
