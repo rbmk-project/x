@@ -39,16 +39,14 @@ func (r *Router) AddFilter(pf packet.Filter) {
 	r.filtermu.Unlock()
 }
 
-// Attach attaches a [packet.NetworkDevice] to the [*Router].
+// Attach attaches a [packet.NetworkDevice] to the [*Router] reading
+// packets from the router and setting up routes for all the device
+// addresses to correctly forward packets back to the device.
 func (r *Router) Attach(dev packet.NetworkDevice) {
-	go r.readLoop(dev)
-}
-
-// AddRoute adds routes for all addresses of the given [packet.NetworkDevice].
-func (r *Router) AddRoute(dev packet.NetworkDevice) {
 	for _, addr := range dev.Addresses() {
 		r.srt[addr] = dev
 	}
+	go r.readLoop(dev)
 }
 
 // readLoop reads packets from a [packet.NetworkDevice] until EOF.

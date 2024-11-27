@@ -27,15 +27,16 @@ type Config struct {
 // baseDevice is the common implementation for the
 // devices type returned by this package.
 type baseDevice struct {
-	input  chan *packet.Packet
-	output chan *packet.Packet
+	addresses []netip.Addr
+	input     chan *packet.Packet
+	output    chan *packet.Packet
 }
 
-func (*baseDevice) Addresses() []netip.Addr {
-	return nil
+func (dev *baseDevice) Addresses() []netip.Addr {
+	return dev.addresses
 }
 
-func (*baseDevice) EOF() <-chan struct{} {
+func (dev *baseDevice) EOF() <-chan struct{} {
 	return nil
 }
 
@@ -92,8 +93,9 @@ func (ed *externalDevice) Output() <-chan *packet.Packet {
 func Extend(dev packet.NetworkDevice, config *Config) packet.NetworkDevice {
 	input, output := packet.NewNetworkDeviceIOChannels()
 	local := &baseDevice{
-		input:  input,
-		output: output,
+		addresses: dev.Addresses(),
+		input:     input,
+		output:    output,
 	}
 	go forward(dev, &internalDevice{local}, config)
 	go forward(&internalDevice{local}, dev, config)

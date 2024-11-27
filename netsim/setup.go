@@ -60,7 +60,6 @@ func (s *Scenario) newBaseStack(cfg *StackConfig) (*Stack, error) {
 		addrs[idx] = pa
 	}
 	stack := NewStack(addrs...)
-	s.router.AddRoute(stack)
 	return stack, nil
 }
 
