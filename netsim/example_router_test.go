@@ -7,8 +7,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/rbmk-project/x/netsim"
+	"github.com/rbmk-project/x/netsim/geolink"
 )
 
 // This example shows how to use a router to simulate a network
@@ -33,9 +35,14 @@ func Example_router() {
 	// Create server stack emulating www.example.com.
 	scenario.Attach(scenario.MustNewExampleComStack())
 
-	// Create and attach the client stack.
+	// Create the client stack, build a geographic point-to-point link
+	// and attach the scenario router to the other end of the link.
 	clientStack := scenario.MustNewClientStack()
-	scenario.Attach(clientStack)
+	linkDev := geolink.Extend(clientStack, &geolink.Config{
+		Delay: 10 * time.Millisecond,
+		Log:   true,
+	})
+	scenario.Attach(linkDev)
 
 	// Create the HTTP client
 	clientTxp := scenario.NewHTTPTransport(clientStack)
