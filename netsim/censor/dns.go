@@ -3,6 +3,8 @@
 package censor
 
 import (
+	"net/netip"
+
 	"github.com/miekg/dns"
 	netsimdns "github.com/rbmk-project/x/netsim/dns"
 	"github.com/rbmk-project/x/netsim/packet"
@@ -13,13 +15,18 @@ type Database = netsimdns.Database
 
 // DNSPoisoner implements GFW-style DNS poisoning
 type DNSPoisoner struct {
-	db *Database
+	addrs map[netip.Addr]struct{}
+	db    *Database
 }
 
 // NewDNSPoisoner creates a new DNS poisoner that injects
 // responses as configured in the given database.
-func NewDNSPoisoner(db *Database) *DNSPoisoner {
-	return &DNSPoisoner{db: db}
+func NewDNSPoisoner(db *Database, addrs ...netip.Addr) *DNSPoisoner {
+	am := make(map[netip.Addr]struct{}, len(addrs))
+	for _, addr := range addrs {
+		am[addr] = struct{}{}
+	}
+	return &DNSPoisoner{addrs: am, db: db}
 }
 
 // Filter implements [packet.Filter].
@@ -27,6 +34,14 @@ func (p *DNSPoisoner) Filter(pkt *packet.Packet) (packet.Target, []*packet.Packe
 	// Only process UDP DNS queries
 	if pkt.IPProtocol != packet.IPProtocolUDP || pkt.DstPort != 53 {
 		return packet.ACCEPT, nil
+	}
+
+	// Check whether we should only filter
+	// specific network addresses
+	if len(p.addrs) > 0 {
+		if _, ok := p.addrs[pkt.DstAddr]; !ok {
+			return packet.ACCEPT, nil
+		}
 	}
 
 	// Parse DNS query
