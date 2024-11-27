@@ -45,7 +45,8 @@ func (s *Scenario) MustNewExampleComStack() *Stack {
 			"2606:2800:21f:cb07:6820:80da:af6b:8b2c",
 			"93.184.216.34",
 		},
-		HTTPHandler: handler,
+		HTTPHandler:  handler,
+		HTTPSHandler: handler,
 	})
 }
 
@@ -87,7 +88,6 @@ func (s *Scenario) MustNewBlockpageStack() *Stack {
 		Addresses: []string{
 			"10.10.34.35", // RFC1918 private address for blockpage server
 		},
-		HTTPHandler:  handler,
-		HTTPSHandler: handler,
+		HTTPHandler: handler,
 	})
 }
