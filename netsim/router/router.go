@@ -13,9 +13,6 @@ import (
 
 // Router provides routing capabilities.
 type Router struct {
-	// devs tracks attached [packet.NetworkDevice].
-	devs []packet.NetworkDevice
-
 	// filtermu protects access to filters.
 	filtermu sync.RWMutex
 
@@ -29,7 +26,6 @@ type Router struct {
 // New creates a new [*Router].
 func New() *Router {
 	return &Router{
-		devs:     make([]packet.NetworkDevice, 0),
 		filtermu: sync.RWMutex{},
 		filters:  make([]packet.Filter, 0),
 		srt:      make(map[netip.Addr]packet.NetworkDevice),
@@ -45,7 +41,6 @@ func (r *Router) AddFilter(pf packet.Filter) {
 
 // Attach attaches a [packet.NetworkDevice] to the [*Router].
 func (r *Router) Attach(dev packet.NetworkDevice) {
-	r.devs = append(r.devs, dev)
 	go r.readLoop(dev)
 }
 
