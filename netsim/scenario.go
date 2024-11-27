@@ -98,7 +98,9 @@ func (s *Scenario) Close() error {
 	return s.pool.Close()
 }
 
-// Attach connects a device to the scenario's central router.
+// Attach connects a device to the scenario's central router to
+// read packets from the device, and sets up the route to that
+// return packets correctly reach the device.
 //
 // The common case is to attach a [*Stack] but other cases are also
 // possible. Suppose a [*Stack] is linked to a firewall through a link,
