@@ -4,7 +4,6 @@ package censor
 
 import (
 	"bytes"
-	"fmt"
 	"net/netip"
 	"sync"
 	"time"
@@ -41,15 +40,6 @@ type fiveTuple struct {
 	srcPort uint16
 	dstAddr netip.Addr
 	dstPort uint16
-}
-
-func (ft fiveTuple) String() string {
-	return fmt.Sprintf(
-		"%s -> %s %s",
-		netip.AddrPortFrom(ft.srcAddr, ft.srcPort),
-		netip.AddrPortFrom(ft.dstAddr, ft.dstPort),
-		ft.proto,
-	)
 }
 
 // NewBlackholer creates a new [*Blackholer] instance.
