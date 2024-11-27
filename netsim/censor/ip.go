@@ -84,14 +84,14 @@ func (t *Blackholer) Filter(pkt *packet.Packet) (packet.Target, []*packet.Packet
 	// Check if we need to filter specific endpoint
 	if t.target.IsValid() {
 		if pkt.DstAddr != t.target.Addr() || pkt.DstPort != t.target.Port() {
-			return packet.ACCEPT, nil
+			return packet.CONTINUE, nil
 		}
 	}
 
 	// If we have a pattern, check payload
 	if t.pattern != nil {
 		if len(pkt.Payload) <= 0 || !bytes.Contains(pkt.Payload, t.pattern) {
-			return packet.ACCEPT, nil
+			return packet.CONTINUE, nil
 		}
 	}
 
@@ -150,16 +150,16 @@ func (r *DNatter) Filter(pkt *packet.Packet) (packet.Target, []*packet.Packet) {
 	if pkt.SrcAddr == r.source && (pkt.DstAddr == r.target.Addr() && pkt.DstPort == r.target.Port()) {
 		pkt.DstAddr = r.repl.Addr()
 		pkt.DstPort = r.repl.Port()
-		return packet.ACCEPT, nil
+		return packet.CONTINUE, nil
 	}
 
 	// return patch match on the DNAT rule
 	if (pkt.SrcAddr == r.repl.Addr() && pkt.SrcPort == r.repl.Port()) && pkt.DstAddr == r.source {
 		pkt.SrcAddr = r.target.Addr()
 		pkt.SrcPort = r.target.Port()
-		return packet.ACCEPT, nil
+		return packet.CONTINUE, nil
 	}
 
 	// otherwise just accept the packet
-	return packet.ACCEPT, nil
+	return packet.CONTINUE, nil
 }

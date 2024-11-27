@@ -188,8 +188,8 @@ func NewNetworkDeviceIOChannels() (chan *Packet, chan *Packet) {
 type Target int
 
 const (
-	// ACCEPT lets the [*Packet] continue through the chain.
-	ACCEPT Target = iota
+	// CONTINUE lets the [*Packet] continue through the chain.
+	CONTINUE Target = iota
 
 	// DROP silently discards the [*Packet].
 	DROP
