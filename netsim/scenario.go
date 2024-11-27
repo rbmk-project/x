@@ -79,6 +79,9 @@ func (s *Scenario) MustNewStack(config *StackConfig) *Stack {
 	if config.DNSOverUDPHandler != nil {
 		s.mustSetupDNSOverUDP(stack, config)
 	}
+	if config.DNSOverTCPHandler != nil {
+		s.mustSetupDNSOverTCP(stack, config)
+	}
 
 	// Start HTTP handlers.
 	if config.HTTPHandler != nil {
