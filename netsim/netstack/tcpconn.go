@@ -22,8 +22,8 @@ import (
 type TCPConn struct {
 	buf      bytes.Buffer
 	initonce sync.Once
-	*Port
-	rlock sync.Mutex
+	p        *Port
+	rlock    sync.Mutex
 }
 
 // NewTCPConn creates a new TCP connection.
@@ -31,7 +31,7 @@ func NewTCPConn(p *Port) *TCPConn {
 	return &TCPConn{
 		buf:      bytes.Buffer{},
 		initonce: sync.Once{},
-		Port:     p,
+		p:        p,
 		rlock:    sync.Mutex{},
 	}
 }
@@ -41,7 +41,7 @@ func (c *TCPConn) Accept() (err error) {
 	c.initonce.Do(func() {
 		c.SetDeadline(time.Now().Add(time.Second))
 		defer c.SetDeadline(time.Time{})
-		err = c.Port.WritePacket(nil, TCPFlagSYN|TCPFlagACK, netip.AddrPort{})
+		err = c.p.WritePacket(nil, TCPFlagSYN|TCPFlagACK, netip.AddrPort{})
 	})
 	return
 }
@@ -53,12 +53,12 @@ func (c *TCPConn) Connect(ctx context.Context) (err error) {
 			c.SetDeadline(d)
 			defer c.SetDeadline(time.Time{})
 		}
-		err = c.Port.WritePacket(nil, TCPFlagSYN, netip.AddrPort{})
+		err = c.p.WritePacket(nil, TCPFlagSYN, netip.AddrPort{})
 		if err != nil {
 			return
 		}
 		var pkt *Packet
-		pkt, err = c.Port.ReadPacket()
+		pkt, err = c.p.ReadPacket()
 		if err != nil {
 			return
 		}
@@ -73,9 +73,6 @@ func (c *TCPConn) Connect(ctx context.Context) (err error) {
 	})
 	return
 }
-
-// Ensure [*TCPConn] implements [net.PacketConn].
-var _ net.PacketConn = &TCPConn{}
 
 // Ensure [*TCPConn] implements [net.Conn].
 var _ net.Conn = &TCPConn{}
@@ -94,7 +91,7 @@ func (c *TCPConn) Read(buf []byte) (int, error) {
 		}
 
 		// otherwise, attempt to read the next packet
-		pkt, err := c.Port.ReadPacket()
+		pkt, err := c.p.ReadPacket()
 		if err != nil {
 			return 0, err
 		}
@@ -119,6 +116,36 @@ func (c *TCPConn) Read(buf []byte) (int, error) {
 
 // Close implements [net.Conn].
 func (c *TCPConn) Close() error {
-	c.Port.WritePacket(nil, TCPFlagFIN, netip.AddrPort{})
-	return c.Port.Close()
+	c.p.WritePacket(nil, TCPFlagFIN, netip.AddrPort{})
+	return c.p.Close()
+}
+
+// LocalAddr implements [net.Conn].
+func (c *TCPConn) LocalAddr() net.Addr {
+	return c.p.LocalAddr()
+}
+
+// RemoteAddr implements [net.Conn].
+func (c *TCPConn) RemoteAddr() net.Addr {
+	return c.p.RemoteAddr()
+}
+
+// SetDeadline implements [net.Conn].
+func (c *TCPConn) SetDeadline(t time.Time) error {
+	return c.p.SetDeadline(t)
+}
+
+// SetReadDeadline implements [net.Conn].
+func (c *TCPConn) SetReadDeadline(t time.Time) error {
+	return c.p.SetReadDeadline(t)
+}
+
+// SetWriteDeadline implements [net.Conn].
+func (c *TCPConn) SetWriteDeadline(t time.Time) error {
+	return c.p.SetWriteDeadline(t)
+}
+
+// Write implements [net.Conn].
+func (c *TCPConn) Write(data []byte) (int, error) {
+	return c.p.Write(data)
 }
