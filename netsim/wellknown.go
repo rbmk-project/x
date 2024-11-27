@@ -71,3 +71,20 @@ func (s *Scenario) MustNewClientStack() *Stack {
 		},
 	})
 }
+
+// MustNewBlockpageStack creates a new stack simulating a censorship blockpage server.
+//
+// It serves a simple warning page on HTTP/HTTPS indicating that the content has been blocked.
+func (s *Scenario) MustNewBlockpageStack() *Stack {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Access to this website has been blocked by network policy.\n"))
+	})
+
+	return s.MustNewStack(&StackConfig{
+		Addresses: []string{
+			"10.10.34.35",
+		},
+		HTTPHandler: handler,
+	})
+}
