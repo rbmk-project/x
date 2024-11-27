@@ -82,11 +82,8 @@ func (s *Scenario) MustNewBlockpageStack() *Stack {
 	})
 
 	return s.MustNewStack(&StackConfig{
-		DomainNames: []string{
-			"block.invalid", // Using .invalid TLD to avoid conflicts
-		},
 		Addresses: []string{
-			"10.10.34.35", // RFC1918 private address for blockpage server
+			"10.10.34.35",
 		},
 		HTTPHandler: handler,
 	})
