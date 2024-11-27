@@ -19,7 +19,7 @@ func Example_http() {
 	scenario := netsim.NewScenario("testdata")
 	defer scenario.Close()
 
-	// Create server stack emulating dns.google.
+	// Create server stack emulating www.example.com.
 	//
 	// This includes:
 	//
@@ -28,7 +28,7 @@ func Example_http() {
 	// 2. registering the proper domain names and addresses
 	//
 	// 3. updating the PKI database to include the server's certificate
-	scenario.Attach(scenario.MustNewGoogleDNSStack())
+	scenario.Attach(scenario.MustNewExampleComStack())
 
 	// Create and attach the client stack.
 	clientStack := scenario.MustNewClientStack()
@@ -40,7 +40,7 @@ func Example_http() {
 	clientHTTP := &http.Client{Transport: clientTxp}
 
 	// Get the response body.
-	resp, err := clientHTTP.Get("http://8.8.8.8/")
+	resp, err := clientHTTP.Get("http://93.184.216.34/")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,5 +57,5 @@ func Example_http() {
 	fmt.Printf("%s", string(body))
 
 	// Output:
-	// Google Public DNS server.
+	// Example Web Server.
 }
