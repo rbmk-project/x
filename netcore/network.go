@@ -9,6 +9,7 @@ package netcore
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"log/slog"
 	"net"
 	"time"
@@ -40,6 +41,11 @@ type Network struct {
 	// NewTLSClientConn is the optional function to create a new TLS client
 	// connection. If this field is nil, we use the [crypto/tls] package.
 	NewTLSClientConn func(conn net.Conn, config *tls.Config) TLSConn
+
+	// RootCAs contains the optional [*x509.CertPool] used when
+	// creating TLS connections. If it is not set, we use the system's
+	// root CAs. This field is only used when the TLSConfig field is nil.
+	RootCAs *x509.CertPool
 
 	// TLSConfig is the TLS client config to use. If this field is nil, we
 	// will try to create a suitable config based on the network and address
