@@ -8,6 +8,7 @@ package netcore
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net"
 )
 
@@ -18,19 +19,19 @@ func (nx *Network) tlsConfig(network, address string) (*tls.Config, error) {
 		config := nx.TLSConfig.Clone() // make sure we return a cloned config
 		return config, nil
 	}
-	return newTLSConfig(network, address)
+	return newTLSConfig(network, address, nx.RootCAs)
 }
 
 // newTLSConfig is a best-effort attempt at creating a suitable TLS config
 // for TCP and UDP transports using the network and address.
-func newTLSConfig(network, address string) (*tls.Config, error) {
+func newTLSConfig(network, address string, pool *x509.CertPool) (*tls.Config, error) {
 	sni, port, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
 	}
 
 	config := &tls.Config{
-		RootCAs:    nil, // TODO(bassosimone): bundle Mozilla CA store
+		RootCAs:    pool, // default to nil, which implies using the system root CAs
 		NextProtos: []string{},
 		ServerName: sni,
 	}
