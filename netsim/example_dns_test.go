@@ -7,9 +7,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/rbmk-project/dnscore"
 	"github.com/rbmk-project/x/netsim"
 )
 
@@ -193,6 +195,71 @@ func Example_dnsOverTLS() {
 	// Perform the DNS round trip
 	clientDNS := &dns.Client{Net: "tcp-tls"}
 	resp, _, err := clientDNS.ExchangeWithConnContext(ctx, query, &dns.Conn{Conn: tconn})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Print the responses
+	for _, ans := range resp.Answer {
+		if a, ok := ans.(*dns.A); ok {
+			fmt.Printf("%s\n", a.A.String())
+		}
+	}
+
+	// Output:
+	// 8.8.8.8
+}
+
+// This example shows how to use [netsim] to simulate a DNS
+// server that listens for incoming requests over HTTPS.
+func Example_dnsOverHTTPS() {
+	// Create a new scenario using the given directory to cache
+	// the certificates used by the simulated PKI
+	scenario := netsim.NewScenario("testdata")
+	defer scenario.Close()
+
+	// Create server stack emulating dns.google.
+	//
+	// This includes:
+	//
+	// 1. creating, attaching, and enabling routing for a server stack
+	//
+	// 2. registering the proper domain names and addresses
+	//
+	// 3. updating the PKI database to include the server's certificate
+	scenario.Attach(scenario.MustNewGoogleDNSStack())
+
+	// Create and attach the client stack.
+	clientStack := scenario.MustNewClientStack()
+	scenario.Attach(clientStack)
+
+	// Create a context with a watchdog timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// Create the dnscore transport and the server address
+	txp := &dnscore.Transport{
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				DialContext: clientStack.DialContext,
+				TLSClientConfig: &tls.Config{
+					RootCAs:    scenario.RootCAs(),
+					ServerName: "dns.google",
+				},
+			},
+		},
+	}
+	serverAddr := dnscore.NewServerAddr(
+		dnscore.ProtocolDoH, "https://8.8.8.8/dns-query")
+
+	// Create the query to send
+	query, err := dnscore.NewQuery("dns.google", dns.TypeA)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Perform the DNS round trip
+	resp, err := txp.Query(ctx, serverAddr, query)
 	if err != nil {
 		log.Fatal(err)
 	}

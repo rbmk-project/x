@@ -11,9 +11,11 @@ import "net/http"
 
 // MustNewGoogleDNSStack creates a new stack simulating dns.google.
 func (s *Scenario) MustNewGoogleDNSStack() *Stack {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Google Public DNS server.\n"))
-	})
+	}))
+	mux.Handle("/dns-query", NewDNSHTTPHandler(*s.dnsd))
 	return s.MustNewStack(&StackConfig{
 		DomainNames: []string{
 			"dns.google",
@@ -26,8 +28,7 @@ func (s *Scenario) MustNewGoogleDNSStack() *Stack {
 		DNSOverUDPHandler: s.DNSHandler(),
 		DNSOverTCPHandler: s.DNSHandler(),
 		DNSOverTLSHandler: s.DNSHandler(),
-		HTTPHandler:       handler,
-		HTTPSHandler:      handler,
+		HTTPSHandler:      mux,
 	})
 }
 
