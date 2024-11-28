@@ -12,6 +12,7 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -52,54 +53,57 @@ func (nx *Network) maybeWrapConn(ctx context.Context, conn net.Conn) net.Conn {
 func WrapConn(ctx context.Context, netx *Network, conn net.Conn) net.Conn {
 	laddr := connLocalAddr(conn)
 	conn = &connWrapper{
-		ctx:      ctx,
-		conn:     conn,
-		laddr:    laddr.String(),
-		netx:     netx,
-		protocol: laddr.Network(),
-		raddr:    connRemoteAddr(conn).String(),
+		ctx:       ctx,
+		closeonce: sync.Once{},
+		conn:      conn,
+		laddr:     laddr.String(),
+		netx:      netx,
+		protocol:  laddr.Network(),
+		raddr:     connRemoteAddr(conn).String(),
 	}
 	return conn
 }
 
 // connWrapper wraps a [net.Conn].
 type connWrapper struct {
-	ctx      context.Context // only used for logging
-	conn     net.Conn
-	laddr    string
-	netx     *Network
-	protocol string
-	raddr    string
+	ctx       context.Context // only used for logging
+	closeonce sync.Once
+	conn      net.Conn
+	laddr     string
+	netx      *Network
+	protocol  string
+	raddr     string
 }
 
 // Close implements [net.Conn].
-func (c *connWrapper) Close() error {
-	t0 := c.netx.timeNow()
-	c.netx.Logger.InfoContext(
-		c.ctx,
-		"closeStart",
-		slog.String("localAddr", c.laddr),
-		slog.String("protocol", c.protocol),
-		slog.String("remoteAddr", c.raddr),
-		slog.Time("t", t0),
-	)
+func (c *connWrapper) Close() (err error) {
+	c.closeonce.Do(func() {
+		t0 := c.netx.timeNow()
+		c.netx.Logger.InfoContext(
+			c.ctx,
+			"closeStart",
+			slog.String("localAddr", c.laddr),
+			slog.String("protocol", c.protocol),
+			slog.String("remoteAddr", c.raddr),
+			slog.Time("t", t0),
+		)
 
-	err := c.conn.Close()
+		err = c.conn.Close()
 
-	// TODO(bassosimone): we should remap the error
+		// TODO(bassosimone): we should remap the error
 
-	c.netx.Logger.InfoContext(
-		c.ctx,
-		"closeDone",
-		slog.Any("err", err),
-		slog.String("localAddr", c.laddr),
-		slog.String("protocol", c.protocol),
-		slog.String("remoteAddr", c.raddr),
-		slog.Time("t0", t0),
-		slog.Time("t", c.netx.timeNow()),
-	)
-
-	return err
+		c.netx.Logger.InfoContext(
+			c.ctx,
+			"closeDone",
+			slog.Any("err", err),
+			slog.String("localAddr", c.laddr),
+			slog.String("protocol", c.protocol),
+			slog.String("remoteAddr", c.raddr),
+			slog.Time("t0", t0),
+			slog.Time("t", c.netx.timeNow()),
+		)
+	})
+	return
 }
 
 // LocalAddr implements [net.Conn].
