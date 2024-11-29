@@ -14,6 +14,8 @@ import (
 	"log/slog"
 	"net"
 	"time"
+
+	"github.com/rbmk-project/x/errclass"
 )
 
 // DialContext establishes a new TCP/UDP connection.
@@ -107,6 +109,7 @@ func (nx *Network) emitConnectDone(ctx context.Context,
 			ctx,
 			"connectDone",
 			slog.Any("err", err),
+			slog.String("errclass", errclass.New(err)),
 			slog.String("localAddr", connLocalAddr(conn).String()),
 			slog.String("protocol", network),
 			slog.String("remoteAddr", address),

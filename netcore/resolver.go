@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"net"
 	"time"
+
+	"github.com/rbmk-project/x/errclass"
 )
 
 // maybeLookupEndpoint resolves the domain name inside an endpoint into
@@ -51,8 +53,6 @@ func (nx *Network) maybeLookupHost(ctx context.Context, domain string) ([]string
 
 	// Perform the actual lookup
 	addrs, err := nx.doLookupHost(ctx, domain)
-
-	// TODO(bassosimone): decide whether we want to remap the error here
 
 	// Emit structured event after the lookup
 	nx.emitLookupHostDone(ctx, domain, t0, addrs, err)
@@ -97,6 +97,7 @@ func (nx *Network) emitLookupHostDone(ctx context.Context,
 			slog.String("dnsLookupDomain", domain),
 			slog.Any("dnsResolvedAddrs", addrs),
 			slog.Any("err", err),
+			slog.String("errclass", errclass.New(err)),
 			slog.Time("t0", t0),
 			slog.Time("t", nx.timeNow()),
 		)

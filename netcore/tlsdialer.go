@@ -16,6 +16,8 @@ import (
 	"log/slog"
 	"net"
 	"time"
+
+	"github.com/rbmk-project/x/errclass"
 )
 
 // TLSConn is the interface implementing [*tls.Conn] as well as
@@ -69,8 +71,6 @@ func (td *tlsDialer) dial(ctx context.Context, network, address string) (net.Con
 	// perform the TLS handshake
 	err = tconn.HandshakeContext(ctx)
 
-	// TODO(bassosimone): remap the error here
-
 	// emit event after the TLS handshake
 	td.emitTLSHandshakeDone(ctx, laddr, network, address, t0, err, tconn.ConnectionState())
 
@@ -117,6 +117,7 @@ func (td *tlsDialer) emitTLSHandshakeDone(ctx context.Context,
 			ctx,
 			"tlsHandshakeDone",
 			slog.Any("err", err),
+			slog.String("errclass", errclass.New(err)),
 			slog.String("localAddr", localAddr),
 			slog.String("protocol", network),
 			slog.String("remoteAddr", remoteAddr),

@@ -14,6 +14,8 @@ connection events via the [log/slog] package.
 
 - Optional logging for structured diagnostic events through [log/slog].
 
+- Include error classification into the logging events.
+
 # Design Documents
 
 This package is experimental and has no design documents for now.

@@ -14,6 +14,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/rbmk-project/x/errclass"
 )
 
 // connLocalAddr is a safe way to get the local address of a connection.
@@ -90,12 +92,11 @@ func (c *connWrapper) Close() (err error) {
 
 		err = c.conn.Close()
 
-		// TODO(bassosimone): we should remap the error
-
 		c.netx.Logger.InfoContext(
 			c.ctx,
 			"closeDone",
 			slog.Any("err", err),
+			slog.String("errclass", errclass.New(err)),
 			slog.String("localAddr", c.laddr),
 			slog.String("protocol", c.protocol),
 			slog.String("remoteAddr", c.raddr),
@@ -126,13 +127,12 @@ func (c *connWrapper) Read(buf []byte) (int, error) {
 
 	count, err := c.conn.Read(buf)
 
-	// TODO(bassosimone): we should remap the error
-
 	c.netx.Logger.InfoContext(
 		c.ctx,
 		"readDone",
 		slog.Int("ioBytesCount", count),
 		slog.Any("err", err),
+		slog.String("errclass", errclass.New(err)),
 		slog.String("localAddr", c.laddr),
 		slog.String("protocol", c.protocol),
 		slog.String("remoteAddr", c.raddr),
@@ -178,13 +178,12 @@ func (c *connWrapper) Write(data []byte) (n int, err error) {
 
 	count, err := c.conn.Write(data)
 
-	// TODO(bassosimone): we should remap the error
-
 	c.netx.Logger.InfoContext(
 		c.ctx,
 		"writeDone",
 		slog.Int("ioBytesCount", count),
 		slog.Any("err", err),
+		slog.String("errclass", errclass.New(err)),
 		slog.String("localAddr", c.laddr),
 		slog.String("protocol", c.protocol),
 		slog.String("remoteAddr", c.raddr),
