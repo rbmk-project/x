@@ -117,7 +117,7 @@ func (c *connWrapper) Read(buf []byte) (int, error) {
 	c.netx.Logger.InfoContext(
 		c.ctx,
 		"readStart",
-		slog.Int("count", len(buf)),
+		slog.Int("ioBufferSize", len(buf)),
 		slog.String("localAddr", c.laddr),
 		slog.String("protocol", c.protocol),
 		slog.String("remoteAddr", c.raddr),
@@ -131,7 +131,7 @@ func (c *connWrapper) Read(buf []byte) (int, error) {
 	c.netx.Logger.InfoContext(
 		c.ctx,
 		"readDone",
-		slog.Int("count", count),
+		slog.Int("ioBytesCount", count),
 		slog.Any("err", err),
 		slog.String("localAddr", c.laddr),
 		slog.String("protocol", c.protocol),
@@ -169,7 +169,7 @@ func (c *connWrapper) Write(data []byte) (n int, err error) {
 	c.netx.Logger.InfoContext(
 		c.ctx,
 		"writeStart",
-		slog.Int("count", len(data)),
+		slog.Int("ioBufferSize", len(data)),
 		slog.String("localAddr", c.laddr),
 		slog.String("protocol", c.protocol),
 		slog.String("remoteAddr", c.raddr),
@@ -183,7 +183,7 @@ func (c *connWrapper) Write(data []byte) (n int, err error) {
 	c.netx.Logger.InfoContext(
 		c.ctx,
 		"writeDone",
-		slog.Int("count", count),
+		slog.Int("ioBytesCount", count),
 		slog.Any("err", err),
 		slog.String("localAddr", c.laddr),
 		slog.String("protocol", c.protocol),

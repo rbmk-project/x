@@ -80,7 +80,7 @@ func (nx *Network) emitLookupHostStart(ctx context.Context, domain string) time.
 		nx.Logger.InfoContext(
 			ctx,
 			"lookupHostStart",
-			slog.String("domain", domain),
+			slog.String("dnsLookupDomain", domain),
 			slog.Time("t", t0),
 		)
 	}
@@ -94,8 +94,8 @@ func (nx *Network) emitLookupHostDone(ctx context.Context,
 		nx.Logger.InfoContext(
 			ctx,
 			"lookupHostDone",
-			slog.String("domain", domain),
-			slog.Any("addrs", addrs),
+			slog.String("dnsLookupDomain", domain),
+			slog.Any("dnsResolvedAddrs", addrs),
 			slog.Any("err", err),
 			slog.Time("t0", t0),
 			slog.Time("t", nx.timeNow()),
