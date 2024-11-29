@@ -97,7 +97,7 @@ func (nx *Network) emitLookupHostDone(ctx context.Context,
 			slog.String("dnsLookupDomain", domain),
 			slog.Any("dnsResolvedAddrs", addrs),
 			slog.Any("err", err),
-			slog.String("errclass", errclass.New(err)),
+			slog.String("errClass", errclass.New(err)),
 			slog.Time("t0", t0),
 			slog.Time("t", nx.timeNow()),
 		)

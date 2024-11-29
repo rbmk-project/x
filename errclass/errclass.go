@@ -10,7 +10,7 @@ with names resembling standard Unix error names.
 
 1. Preserve original error in `err` in the structured logs.
 
-2. Add the classified error as the `errclass` field.
+2. Add the classified error as the `errClass` field.
 
 3. Use [errors.Is] and [errors.As] for classification.
 
