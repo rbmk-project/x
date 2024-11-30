@@ -17,7 +17,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/rbmk-project/x/errclass"
+	"github.com/rbmk-project/common/errclass"
 )
 
 // TLSConn is the interface implementing [*tls.Conn] as well as

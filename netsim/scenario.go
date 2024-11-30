@@ -5,8 +5,8 @@ package netsim
 import (
 	"crypto/x509"
 
+	"github.com/rbmk-project/common/closepool"
 	"github.com/rbmk-project/common/runtimex"
-	"github.com/rbmk-project/x/closepool"
 	"github.com/rbmk-project/x/netsim/packet"
 	"github.com/rbmk-project/x/netsim/router"
 	"github.com/rbmk-project/x/netsim/simpki"
