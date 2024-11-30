@@ -6,6 +6,8 @@ Package errclass implements error classification.
 The general idea is to classify golang errors to an enum of strings
 with names resembling standard Unix error names.
 
+Deprecated: use `github.com/rbmk-project/common/errclass` instead.
+
 # Design Principles
 
 1. Preserve original error in `err` in the structured logs.
@@ -64,13 +66,7 @@ platform-specific error constants.
 package errclass
 
 import (
-	"context"
-	"crypto/x509"
-	"errors"
-	"io"
-	"net"
-	"os"
-	"strings"
+	"github.com/rbmk-project/common/errclass"
 )
 
 const (
@@ -79,169 +75,80 @@ const (
 	//
 
 	// EADDRNOTAVAIL is the address not available error.
-	EADDRNOTAVAIL = "EADDRNOTAVAIL"
+	EADDRNOTAVAIL = errclass.EADDRNOTAVAIL
 
 	// EADDRINUSE is the address in use error.
-	EADDRINUSE = "EADDRINUSE"
+	EADDRINUSE = errclass.EADDRINUSE
 
 	// ECONNABORTED is the connection aborted error.
-	ECONNABORTED = "ECONNABORTED"
+	ECONNABORTED = errclass.ECONNABORTED
 
 	// ECONNREFUSED is the connection refused error.
-	ECONNREFUSED = "ECONNREFUSED"
+	ECONNREFUSED = errclass.ECONNREFUSED
 
 	// ECONNRESET is the connection reset by peer error.
-	ECONNRESET = "ECONNRESET"
+	ECONNRESET = errclass.ECONNRESET
 
 	// EHOSTUNREACH is the host unreachable error.
-	EHOSTUNREACH = "EHOSTUNREACH"
+	EHOSTUNREACH = errclass.EHOSTUNREACH
 
 	// EEOF indicates an unexpected EOF.
-	EEOF = "EEOF"
+	EEOF = errclass.EEOF
 
 	// EINVAL is the invalid argument error.
-	EINVAL = "EINVAL"
+	EINVAL = errclass.EINVAL
 
 	// EINTR is the interrupted system call error.
-	EINTR = "EINTR"
+	EINTR = errclass.EINTR
 
 	// ENETDOWN is the network is down error.
-	ENETDOWN = "ENETDOWN"
+	ENETDOWN = errclass.ENETDOWN
 
 	// ENETUNREACH is the network unreachable error.
-	ENETUNREACH = "ENETUNREACH"
+	ENETUNREACH = errclass.ENETUNREACH
 
 	// ENOBUFS is the no buffer space available error.
-	ENOBUFS = "ENOBUFS"
+	ENOBUFS = errclass.ENOBUFS
 
 	// ENOTCONN is the not connected error.
-	ENOTCONN = "ENOTCONN"
+	ENOTCONN = errclass.ENOTCONN
 
 	// EPROTONOSUPPORT is the protocol not supported error.
-	EPROTONOSUPPORT = "EPROTONOSUPPORT"
+	EPROTONOSUPPORT = errclass.EPROTONOSUPPORT
 
 	// ETIMEDOUT is the operation timed out error.
-	ETIMEDOUT = "ETIMEDOUT"
+	ETIMEDOUT = errclass.ETIMEDOUT
 
 	//
 	// Errors that we can map using the error message suffix:
 	//
 
 	// EDNS_NONAME is the DNS error for "no such host".
-	EDNS_NONAME = "EDNS_NONAME"
+	EDNS_NONAME = errclass.EDNS_NONAME
 
 	// EDNS_NODATA 	is the DNS error for "no answer".
-	EDNS_NODATA = "EDNS_NODATA"
+	EDNS_NODATA = errclass.EDNS_NODATA
 
 	//
 	// Errors that we can map using [errors.As]:
 	//
 
 	// ETLS_HOSTNAME_MISMATCH is the TLS error for hostname verification failure.
-	ETLS_HOSTNAME_MISMATCH = "ETLS_HOSTNAME_MISMATCH"
+	ETLS_HOSTNAME_MISMATCH = errclass.ETLS_HOSTNAME_MISMATCH
 
 	// ETLS_CA_UNKNOWN is the TLS error for unknown certificate authority.
-	ETLS_CA_UNKNOWN = "ETLS_CA_UNKNOWN"
+	ETLS_CA_UNKNOWN = errclass.ETLS_CA_UNKNOWN
 
 	// ETLS_CERT_INVALID is the TLS error for invalid certificate.
-	ETLS_CERT_INVALID = "ETLS_CERT_INVALID"
+	ETLS_CERT_INVALID = errclass.ETLS_CERT_INVALID
 
 	//
 	// Fallback errors:
 	//
 
 	// EGENERIC is the generic, unclassified error.
-	EGENERIC = "EGENERIC"
+	EGENERIC = errclass.EGENERIC
 )
 
-// errorsIsMap contains the errors that we can map with [errors.Is].
-var errorsIsMap = map[error]string{
-	context.DeadlineExceeded: ETIMEDOUT,
-	context.Canceled:         EINTR,
-	errEADDRNOTAVAIL:         EADDRNOTAVAIL,
-	errEADDRINUSE:            EADDRINUSE,
-	errECONNABORTED:          ECONNABORTED,
-	errECONNREFUSED:          ECONNREFUSED,
-	errECONNRESET:            ECONNRESET,
-	errEHOSTUNREACH:          EHOSTUNREACH,
-	io.EOF:                   EEOF,
-	io.ErrUnexpectedEOF:      EEOF,
-	errEINVAL:                EINVAL,
-	errEINTR:                 EINTR,
-	errENETDOWN:              ENETDOWN,
-	errENETUNREACH:           ENETUNREACH,
-	errENOBUFS:               ENOBUFS,
-	errENOTCONN:              ENOTCONN,
-	errEPROTONOSUPPORT:       EPROTONOSUPPORT,
-	errETIMEDOUT:             ETIMEDOUT,
-	net.ErrClosed:            EINTR,
-	os.ErrDeadlineExceeded:   ETIMEDOUT,
-}
-
-// stringSuffixMap contains the errors that we can map using the error message suffix.
-var stringSuffixMap = map[string]string{
-	"no answer from DNS server": EDNS_NODATA,
-	"no such host":              EDNS_NONAME,
-}
-
-// errorsAsList contains the errors that we can map with [errors.As].
-var errorsAsList = []struct {
-	as    func(err error) bool
-	class string
-}{
-	{
-		as: func(err error) bool {
-			var candidate x509.HostnameError
-			return errors.As(err, &candidate)
-		},
-		class: ETLS_HOSTNAME_MISMATCH,
-	},
-
-	{
-		as: func(err error) bool {
-			var candidate x509.UnknownAuthorityError
-			return errors.As(err, &candidate)
-		},
-		class: ETLS_CA_UNKNOWN,
-	},
-
-	{
-		as: func(err error) bool {
-			var candidate x509.CertificateInvalidError
-			return errors.As(err, &candidate)
-		},
-		class: ETLS_CERT_INVALID,
-	},
-}
-
-// New creates a new error class from the given error.
-func New(err error) string {
-	// exclude the nil error case first
-	if err == nil {
-		return ""
-	}
-
-	// attemp direct mapping using the [errors.Is] func
-	for candidate, class := range errorsIsMap {
-		if errors.Is(err, candidate) {
-			return class
-		}
-	}
-
-	// attempt indirect mapping using the [errors.As] func
-	for _, entry := range errorsAsList {
-		if entry.as(err) {
-			return entry.class
-		}
-	}
-
-	// fallback to attempt matching with the string suffix
-	for suffix, class := range stringSuffixMap {
-		if strings.HasSuffix(err.Error(), suffix) {
-			return class
-		}
-	}
-
-	// we don't known this error
-	return EGENERIC
-}
+// New is an alias for [errclass.New].
+var New = errclass.New

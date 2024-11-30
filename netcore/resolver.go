@@ -14,7 +14,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/rbmk-project/x/errclass"
+	"github.com/rbmk-project/common/errclass"
 )
 
 // maybeLookupEndpoint resolves the domain name inside an endpoint into
