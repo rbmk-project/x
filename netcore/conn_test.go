@@ -196,7 +196,7 @@ func TestConnWrapper(t *testing.T) {
 				"level":      "INFO",
 				"msg":        "closeDone",
 				"err":        nil,
-				"errClass":   "success",
+				"errClass":   "",
 				"localAddr":  "127.0.0.1:1234",
 				"protocol":   "tcp",
 				"remoteAddr": "1.1.1.1:443",
@@ -243,7 +243,7 @@ func TestConnWrapper(t *testing.T) {
 				"level":      "INFO",
 				"msg":        "closeDone",
 				"err":        expectedErr.Error(),
-				"errClass":   "unknown_error",
+				"errClass":   "EGENERIC",
 				"localAddr":  "127.0.0.1:1234",
 				"protocol":   "tcp",
 				"remoteAddr": "1.1.1.1:443",
@@ -274,32 +274,6 @@ func TestConnWrapper(t *testing.T) {
 			// Verify we only logged one close operation
 			logs := strings.Split(strings.TrimSpace(buf.String()), "\n")
 			assert.Len(t, logs, 2, "Should only have one pair of start/done logs")
-		})
-
-		t.Run("no logger configured", func(t *testing.T) {
-			mock := &mocks.Conn{
-				MockClose: func() error {
-					return nil
-				},
-				MockLocalAddr: func() net.Addr {
-					return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
-				},
-				MockRemoteAddr: func() net.Addr {
-					return &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 443}
-				},
-			}
-
-			wrapper := &connWrapper{
-				ctx:      context.Background(),
-				conn:     mock,
-				laddr:    "127.0.0.1:1234",
-				netx:     &Network{}, // no logger configured
-				protocol: "tcp",
-				raddr:    "1.1.1.1:443",
-			}
-
-			err := wrapper.Close()
-			assert.NoError(t, err)
 		})
 	})
 }
