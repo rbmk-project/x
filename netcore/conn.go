@@ -81,28 +81,32 @@ type connWrapper struct {
 func (c *connWrapper) Close() (err error) {
 	c.closeonce.Do(func() {
 		t0 := c.netx.timeNow()
-		c.netx.Logger.InfoContext(
-			c.ctx,
-			"closeStart",
-			slog.String("localAddr", c.laddr),
-			slog.String("protocol", c.protocol),
-			slog.String("remoteAddr", c.raddr),
-			slog.Time("t", t0),
-		)
+		if c.netx.Logger != nil {
+			c.netx.Logger.InfoContext(
+				c.ctx,
+				"closeStart",
+				slog.String("localAddr", c.laddr),
+				slog.String("protocol", c.protocol),
+				slog.String("remoteAddr", c.raddr),
+				slog.Time("t", t0),
+			)
+		}
 
 		err = c.conn.Close()
 
-		c.netx.Logger.InfoContext(
-			c.ctx,
-			"closeDone",
-			slog.Any("err", err),
-			slog.String("errClass", errclass.New(err)),
-			slog.String("localAddr", c.laddr),
-			slog.String("protocol", c.protocol),
-			slog.String("remoteAddr", c.raddr),
-			slog.Time("t0", t0),
-			slog.Time("t", c.netx.timeNow()),
-		)
+		if c.netx.Logger != nil {
+			c.netx.Logger.InfoContext(
+				c.ctx,
+				"closeDone",
+				slog.Any("err", err),
+				slog.String("errClass", errclass.New(err)),
+				slog.String("localAddr", c.laddr),
+				slog.String("protocol", c.protocol),
+				slog.String("remoteAddr", c.raddr),
+				slog.Time("t0", t0),
+				slog.Time("t", c.netx.timeNow()),
+			)
+		}
 	})
 	return
 }
@@ -115,30 +119,34 @@ func (c *connWrapper) LocalAddr() net.Addr {
 // Read implements [net.Conn].
 func (c *connWrapper) Read(buf []byte) (int, error) {
 	t0 := c.netx.timeNow()
-	c.netx.Logger.InfoContext(
-		c.ctx,
-		"readStart",
-		slog.Int("ioBufferSize", len(buf)),
-		slog.String("localAddr", c.laddr),
-		slog.String("protocol", c.protocol),
-		slog.String("remoteAddr", c.raddr),
-		slog.Time("t", t0),
-	)
+	if c.netx.Logger != nil {
+		c.netx.Logger.InfoContext(
+			c.ctx,
+			"readStart",
+			slog.Int("ioBufferSize", len(buf)),
+			slog.String("localAddr", c.laddr),
+			slog.String("protocol", c.protocol),
+			slog.String("remoteAddr", c.raddr),
+			slog.Time("t", t0),
+		)
+	}
 
 	count, err := c.conn.Read(buf)
 
-	c.netx.Logger.InfoContext(
-		c.ctx,
-		"readDone",
-		slog.Int("ioBytesCount", count),
-		slog.Any("err", err),
-		slog.String("errClass", errclass.New(err)),
-		slog.String("localAddr", c.laddr),
-		slog.String("protocol", c.protocol),
-		slog.String("remoteAddr", c.raddr),
-		slog.Time("t0", t0),
-		slog.Time("t", c.netx.timeNow()),
-	)
+	if c.netx.Logger != nil {
+		c.netx.Logger.InfoContext(
+			c.ctx,
+			"readDone",
+			slog.Int("ioBytesCount", count),
+			slog.Any("err", err),
+			slog.String("errClass", errclass.New(err)),
+			slog.String("localAddr", c.laddr),
+			slog.String("protocol", c.protocol),
+			slog.String("remoteAddr", c.raddr),
+			slog.Time("t0", t0),
+			slog.Time("t", c.netx.timeNow()),
+		)
+	}
 
 	return count, err
 }
@@ -166,30 +174,34 @@ func (c *connWrapper) SetWriteDeadline(t time.Time) error {
 // Write implements [net.Conn].
 func (c *connWrapper) Write(data []byte) (n int, err error) {
 	t0 := c.netx.timeNow()
-	c.netx.Logger.InfoContext(
-		c.ctx,
-		"writeStart",
-		slog.Int("ioBufferSize", len(data)),
-		slog.String("localAddr", c.laddr),
-		slog.String("protocol", c.protocol),
-		slog.String("remoteAddr", c.raddr),
-		slog.Time("t", t0),
-	)
+	if c.netx.Logger != nil {
+		c.netx.Logger.InfoContext(
+			c.ctx,
+			"writeStart",
+			slog.Int("ioBufferSize", len(data)),
+			slog.String("localAddr", c.laddr),
+			slog.String("protocol", c.protocol),
+			slog.String("remoteAddr", c.raddr),
+			slog.Time("t", t0),
+		)
+	}
 
 	count, err := c.conn.Write(data)
 
-	c.netx.Logger.InfoContext(
-		c.ctx,
-		"writeDone",
-		slog.Int("ioBytesCount", count),
-		slog.Any("err", err),
-		slog.String("errClass", errclass.New(err)),
-		slog.String("localAddr", c.laddr),
-		slog.String("protocol", c.protocol),
-		slog.String("remoteAddr", c.raddr),
-		slog.Time("t0", t0),
-		slog.Time("t", c.netx.timeNow()),
-	)
+	if c.netx.Logger != nil {
+		c.netx.Logger.InfoContext(
+			c.ctx,
+			"writeDone",
+			slog.Int("ioBytesCount", count),
+			slog.Any("err", err),
+			slog.String("errClass", errclass.New(err)),
+			slog.String("localAddr", c.laddr),
+			slog.String("protocol", c.protocol),
+			slog.String("remoteAddr", c.raddr),
+			slog.Time("t0", t0),
+			slog.Time("t", c.netx.timeNow()),
+		)
+	}
 
 	return count, err
 }
