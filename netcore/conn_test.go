@@ -277,6 +277,9 @@ func TestConnWrapper(t *testing.T) {
 		})
 
 		t.Run("no logger configured", func(t *testing.T) {
+			// Implementation note: this covers the case where you use WrapConn to create
+			// a connWrapper where the underlying netx has no configured logger.
+
 			mock := &mocks.Conn{
 				MockClose: func() error {
 					return nil
