@@ -119,7 +119,6 @@ func TestMaybeWrapConn(t *testing.T) {
 
 func TestConnWrapper(t *testing.T) {
 	t.Run("Close", func(t *testing.T) {
-
 		// Helper function to create a standard test environment
 		setup := func() (*bytes.Buffer, *mocks.Conn, *connWrapper, time.Time) {
 			var buf bytes.Buffer
@@ -303,6 +302,179 @@ func TestConnWrapper(t *testing.T) {
 
 			err := wrapper.Close()
 			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("Read", func(t *testing.T) {
+		// Helper function to create a standard test environment
+		setup := func() (*bytes.Buffer, *mocks.Conn, *connWrapper, time.Time) {
+			var buf bytes.Buffer
+			fixedTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+			timeNow := func() time.Time {
+				return fixedTime
+			}
+
+			logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
+				Level: slog.LevelInfo,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.TimeKey {
+						return slog.Attr{}
+					}
+					return a
+				},
+			}))
+
+			mock := &mocks.Conn{
+				MockLocalAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
+				},
+				MockRemoteAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 443}
+				},
+			}
+
+			wrapper := &connWrapper{
+				ctx:      context.Background(),
+				conn:     mock,
+				laddr:    "127.0.0.1:1234",
+				netx:     &Network{Logger: logger, TimeNow: timeNow},
+				protocol: "tcp",
+				raddr:    "1.1.1.1:443",
+			}
+
+			return &buf, mock, wrapper, fixedTime
+		}
+
+		t.Run("successful read", func(t *testing.T) {
+			buf, mock, wrapper, fixedTime := setup()
+
+			// Configure mock behavior
+			expectedData := []byte("hello world")
+			mock.MockRead = func(b []byte) (int, error) {
+				copy(b, expectedData)
+				return len(expectedData), nil
+			}
+
+			// Perform the read operation
+			readBuf := make([]byte, 1024)
+			n, err := wrapper.Read(readBuf)
+			assert.NoError(t, err)
+			assert.Equal(t, len(expectedData), n)
+			assert.Equal(t, expectedData, readBuf[:n])
+
+			// Verify logging output
+			logs := strings.Split(strings.TrimSpace(buf.String()), "\n")
+			assert.Len(t, logs, 2)
+
+			// Verify readStart log
+			var startLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[0]), &startLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "readStart",
+				"ioBufferSize": float64(1024),
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, startLog)
+
+			// Verify readDone log
+			var doneLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[1]), &doneLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "readDone",
+				"ioBytesCount": float64(len(expectedData)),
+				"err":          nil,
+				"errClass":     "",
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t0":           fixedTime.Format(time.RFC3339Nano),
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, doneLog)
+		})
+
+		t.Run("read with error", func(t *testing.T) {
+			buf, mock, wrapper, fixedTime := setup()
+
+			// Configure mock to return error
+			expectedErr := errors.New("mocked read error")
+			mock.MockRead = func(b []byte) (int, error) {
+				return 0, expectedErr
+			}
+
+			// Perform the read operation
+			readBuf := make([]byte, 1024)
+			n, err := wrapper.Read(readBuf)
+			assert.ErrorIs(t, err, expectedErr)
+			assert.Zero(t, n)
+
+			// Verify logging output
+			logs := strings.Split(strings.TrimSpace(buf.String()), "\n")
+			assert.Len(t, logs, 2)
+
+			// Verify readStart log
+			var startLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[0]), &startLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "readStart",
+				"ioBufferSize": float64(1024),
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, startLog)
+
+			// Verify readDone log
+			var doneLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[1]), &doneLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "readDone",
+				"ioBytesCount": float64(0),
+				"err":          expectedErr.Error(),
+				"errClass":     "EGENERIC",
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t0":           fixedTime.Format(time.RFC3339Nano),
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, doneLog)
+		})
+
+		t.Run("no logger configured", func(t *testing.T) {
+			mock := &mocks.Conn{
+				MockRead: func(b []byte) (int, error) {
+					return len("test"), nil
+				},
+				MockLocalAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
+				},
+				MockRemoteAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 443}
+				},
+			}
+
+			wrapper := &connWrapper{
+				ctx:      context.Background(),
+				conn:     mock,
+				laddr:    "127.0.0.1:1234",
+				netx:     &Network{}, // no logger configured
+				protocol: "tcp",
+				raddr:    "1.1.1.1:443",
+			}
+
+			readBuf := make([]byte, 1024)
+			n, err := wrapper.Read(readBuf)
+			assert.NoError(t, err)
+			assert.Equal(t, len("test"), n)
 		})
 	})
 }
