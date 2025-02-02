@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConnLocalAddr(t *testing.T) {
+func Test_connLocalAddr(t *testing.T) {
 	t.Run("nil connection", func(t *testing.T) {
 		addr := connLocalAddr(nil)
 		assert.Equal(t, "", addr.Network())
@@ -47,7 +47,7 @@ func TestConnLocalAddr(t *testing.T) {
 	})
 }
 
-func TestConnRemoteAddr(t *testing.T) {
+func Test_connRemoteAddr(t *testing.T) {
 	t.Run("nil connection", func(t *testing.T) {
 		addr := connRemoteAddr(nil)
 		assert.Equal(t, "", addr.Network())
@@ -76,7 +76,7 @@ func TestConnRemoteAddr(t *testing.T) {
 	})
 }
 
-func TestMaybeWrapConn(t *testing.T) {
+func TestNetwork_maybeWrapConn(t *testing.T) {
 	t.Run("nil connection", func(t *testing.T) {
 		nx := &Network{}
 		assert.Nil(t, nx.maybeWrapConn(context.Background(), nil))
@@ -113,11 +113,49 @@ func TestMaybeWrapConn(t *testing.T) {
 		}
 		wrapped := nx.maybeWrapConn(context.Background(), conn)
 		assert.NotEqual(t, conn, wrapped) // should return wrapped
-		assert.IsType(t, &connWrapper{}, wrapped)
+		inner, ok := wrapped.(*connWrapper)
+		assert.True(t, ok)
+		assert.Equal(t, inner.netx, nx)
 	})
 }
 
-func TestConnWrapper(t *testing.T) {
+func TestWrapConn(t *testing.T) {
+	t.Run("correctly initializes wrapper", func(t *testing.T) {
+		nx := &Network{
+			Logger:   slog.New(slog.NewTextHandler(io.Discard, nil)),
+			WrapConn: WrapConn,
+		}
+		mock := &mocks.Conn{
+			MockLocalAddr: func() net.Addr {
+				return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
+			},
+			MockRemoteAddr: func() net.Addr {
+				return &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 443}
+			},
+		}
+
+		conn := WrapConn(context.Background(), nx, mock)
+		wrapped, ok := conn.(*connWrapper)
+		assert.True(t, ok)
+		assert.Equal(t, nx, wrapped.netx)
+	})
+
+	t.Run("handles nil addresses gracefully", func(t *testing.T) {
+		nx := &Network{}
+		mock := &mocks.Conn{
+			MockLocalAddr:  func() net.Addr { return nil },
+			MockRemoteAddr: func() net.Addr { return nil },
+		}
+
+		conn := WrapConn(context.Background(), nx, mock)
+		wrapped, ok := conn.(*connWrapper)
+		assert.True(t, ok)
+		assert.Equal(t, "", wrapped.laddr)
+		assert.Equal(t, "", wrapped.raddr)
+	})
+}
+
+func Test_connWrapper(t *testing.T) {
 	t.Run("Close", func(t *testing.T) {
 		// Helper function to create a standard test environment
 		setup := func() (*bytes.Buffer, *mocks.Conn, *connWrapper, time.Time) {
