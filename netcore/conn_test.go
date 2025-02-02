@@ -477,4 +477,174 @@ func TestConnWrapper(t *testing.T) {
 			assert.Equal(t, len("test"), n)
 		})
 	})
+
+	t.Run("Write", func(t *testing.T) {
+		// Helper function to create a standard test environment
+		setup := func() (*bytes.Buffer, *mocks.Conn, *connWrapper, time.Time) {
+			var buf bytes.Buffer
+			fixedTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+			timeNow := func() time.Time {
+				return fixedTime
+			}
+
+			logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
+				Level: slog.LevelInfo,
+				ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+					if a.Key == slog.TimeKey {
+						return slog.Attr{}
+					}
+					return a
+				},
+			}))
+
+			mock := &mocks.Conn{
+				MockLocalAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
+				},
+				MockRemoteAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 443}
+				},
+			}
+
+			wrapper := &connWrapper{
+				ctx:      context.Background(),
+				conn:     mock,
+				laddr:    "127.0.0.1:1234",
+				netx:     &Network{Logger: logger, TimeNow: timeNow},
+				protocol: "tcp",
+				raddr:    "1.1.1.1:443",
+			}
+
+			return &buf, mock, wrapper, fixedTime
+		}
+
+		t.Run("successful write", func(t *testing.T) {
+			buf, mock, wrapper, fixedTime := setup()
+
+			// Configure mock behavior
+			data := []byte("hello world")
+			mock.MockWrite = func(b []byte) (int, error) {
+				return len(b), nil
+			}
+
+			// Perform the write operation
+			n, err := wrapper.Write(data)
+			assert.NoError(t, err)
+			assert.Equal(t, len(data), n)
+
+			// Verify logging output
+			logs := strings.Split(strings.TrimSpace(buf.String()), "\n")
+			assert.Len(t, logs, 2)
+
+			// Verify writeStart log
+			var startLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[0]), &startLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "writeStart",
+				"ioBufferSize": float64(len(data)),
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, startLog)
+
+			// Verify writeDone log
+			var doneLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[1]), &doneLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "writeDone",
+				"ioBytesCount": float64(len(data)),
+				"err":          nil,
+				"errClass":     "",
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t0":           fixedTime.Format(time.RFC3339Nano),
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, doneLog)
+		})
+
+		t.Run("write with error", func(t *testing.T) {
+			buf, mock, wrapper, fixedTime := setup()
+
+			// Configure mock to return error
+			expectedErr := errors.New("mocked write error")
+			mock.MockWrite = func(b []byte) (int, error) {
+				return 0, expectedErr
+			}
+
+			// Perform the write operation
+			data := []byte("hello world")
+			n, err := wrapper.Write(data)
+			assert.ErrorIs(t, err, expectedErr)
+			assert.Zero(t, n)
+
+			// Verify logging output
+			logs := strings.Split(strings.TrimSpace(buf.String()), "\n")
+			assert.Len(t, logs, 2)
+
+			// Verify writeStart log
+			var startLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[0]), &startLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "writeStart",
+				"ioBufferSize": float64(len(data)),
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, startLog)
+
+			// Verify writeDone log
+			var doneLog map[string]interface{}
+			err = json.Unmarshal([]byte(logs[1]), &doneLog)
+			assert.NoError(t, err)
+			assert.Equal(t, map[string]interface{}{
+				"level":        "INFO",
+				"msg":          "writeDone",
+				"ioBytesCount": float64(0),
+				"err":          expectedErr.Error(),
+				"errClass":     "EGENERIC",
+				"localAddr":    "127.0.0.1:1234",
+				"protocol":     "tcp",
+				"remoteAddr":   "1.1.1.1:443",
+				"t0":           fixedTime.Format(time.RFC3339Nano),
+				"t":            fixedTime.Format(time.RFC3339Nano),
+			}, doneLog)
+		})
+
+		t.Run("no logger configured", func(t *testing.T) {
+			mock := &mocks.Conn{
+				MockWrite: func(b []byte) (int, error) {
+					return len(b), nil
+				},
+				MockLocalAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
+				},
+				MockRemoteAddr: func() net.Addr {
+					return &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 443}
+				},
+			}
+
+			wrapper := &connWrapper{
+				ctx:      context.Background(),
+				conn:     mock,
+				laddr:    "127.0.0.1:1234",
+				netx:     &Network{}, // no logger configured
+				protocol: "tcp",
+				raddr:    "1.1.1.1:443",
+			}
+
+			data := []byte("test")
+			n, err := wrapper.Write(data)
+			assert.NoError(t, err)
+			assert.Equal(t, len(data), n)
+		})
+	})
 }
