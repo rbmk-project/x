@@ -72,7 +72,7 @@ type connWrapper struct {
 	closeonce sync.Once
 	conn      net.Conn
 	laddr     string
-	netx      *Network
+	netx      *Network // may contain nil logger!
 	protocol  string
 	raddr     string
 }
