@@ -59,6 +59,10 @@ type Network struct {
 	// WrapConn is an optional function to wrap a connection to emit
 	// structured logs. [WrapConn] is the default wrapper to use.
 	WrapConn func(ctx context.Context, netx *Network, conn net.Conn) net.Conn
+
+	// LookupHostTimeout is the optional timeout to use for limiting
+	// the maximum time spent resolving a domain name.
+	LookupHostTimeout time.Duration
 }
 
 // DefaultNetwork is the default [*Network] used by this package.

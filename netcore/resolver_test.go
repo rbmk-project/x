@@ -80,6 +80,26 @@ func TestNetwork_maybeLookupHost(t *testing.T) {
 		assert.ErrorIs(t, err, expectedErr)
 	})
 
+	t.Run("the timeout is correctly set and propagated", func(t *testing.T) {
+		expectedErr := errors.New("mocked lookup error")
+		nx := &Network{
+			LookupHostFunc: func(ctx context.Context, domain string) ([]string, error) {
+				if _, ok := ctx.Deadline(); !ok {
+					return nil, errors.New("missing context deadline")
+				}
+				select {
+				case <-time.After(250 * time.Millisecond):
+					return nil, errors.New("timeout not respected")
+				case <-ctx.Done():
+					return nil, expectedErr
+				}
+			},
+			LookupHostTimeout: time.Microsecond,
+		}
+		_, err := nx.maybeLookupHost(context.Background(), "example.com")
+		assert.ErrorIs(t, err, expectedErr)
+	})
+
 	t.Run("system resolver error", func(t *testing.T) {
 		// Temporarily override maybeEditResolver and restore it when done
 		maybeEditResolver = func(reso *net.Resolver) *net.Resolver {

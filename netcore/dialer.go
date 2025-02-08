@@ -57,6 +57,8 @@ func (nx *Network) sequentialDial(
 
 // dialLog dials and emits structured logs.
 func (nx *Network) dialLog(ctx context.Context, network, address string) (net.Conn, error) {
+	// TODO(bassosimone): decide whether we want to enforce timeout here
+
 	// Emit structured event before the dial
 	t0 := nx.emitConnectStart(ctx, network, address)
 
