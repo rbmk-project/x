@@ -46,7 +46,12 @@ func (nx *Network) maybeLookupHost(ctx context.Context, domain string) ([]string
 		return []string{domain}, nil
 	}
 
-	// TODO(bassosimone): decide whether we want to enforce timeout here
+	// Optionally enforce a timeout for the lookup
+	if nx.LookupHostTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, nx.LookupHostTimeout)
+		defer cancel()
+	}
 
 	// Emit structured event before the lookup
 	t0 := nx.emitLookupHostStart(ctx, domain)
