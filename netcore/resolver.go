@@ -61,7 +61,7 @@ func (nx *Network) maybeLookupHost(ctx context.Context, domain string) ([]string
 	return addrs, err
 }
 
-// avoidEditingResolver is the default maybeEditResolver implementation.
+// avoidEditingResolver is the default [maybeEditResolver] implementation.
 func avoidEditingResolver(reso *net.Resolver) *net.Resolver {
 	return reso
 }
