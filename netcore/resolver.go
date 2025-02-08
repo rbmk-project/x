@@ -61,6 +61,14 @@ func (nx *Network) maybeLookupHost(ctx context.Context, domain string) ([]string
 	return addrs, err
 }
 
+// avoidEditingResolver is the default maybeEditResolver implementation.
+func avoidEditingResolver(reso *net.Resolver) *net.Resolver {
+	return reso
+}
+
+// maybeEditResolver allows editing the [*net.Resolver] used by unit tests.
+var maybeEditResolver = avoidEditingResolver
+
 // doLookupHost performs the DNS lookup.
 func (nx *Network) doLookupHost(ctx context.Context, domain string) ([]string, error) {
 	// if there is a custom LookupHostFunc, use it
@@ -69,7 +77,7 @@ func (nx *Network) doLookupHost(ctx context.Context, domain string) ([]string, e
 	}
 
 	// otherwise fallback to the system resolver
-	reso := &net.Resolver{}
+	reso := maybeEditResolver(&net.Resolver{})
 	return reso.LookupHost(ctx, domain)
 }
 
