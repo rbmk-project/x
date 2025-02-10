@@ -84,6 +84,13 @@ func (nx *Network) dialLog(ctx context.Context, network, address string) (net.Co
 	return conn, err
 }
 
+// defaultDialer is the default [*net.Dialer] we use.
+var defaultDialer = func() *net.Dialer {
+	dialer := &net.Dialer{}
+	dialer.SetMultipathTCP(false)
+	return dialer
+}()
+
 // dialNet dials using the net package or the configured dialing override.
 func (nx *Network) dialNet(ctx context.Context, network, address string) (net.Conn, error) {
 	// if there's an user provided dialer func, use it
@@ -91,11 +98,11 @@ func (nx *Network) dialNet(ctx context.Context, network, address string) (net.Co
 		return nx.DialContextFunc(ctx, network, address)
 	}
 
-	// otherwise use the net package
-	// TODO(bassosimone): either make multipath TCP configurable
-	// or document that we disable it by default
-	child := &net.Dialer{}
-	child.SetMultipathTCP(false)
+	// otherwise fallback to a default dialer
+	child := defaultDialer
+	if nx.NewDialerOrSingleton != nil {
+		child = nx.NewDialerOrSingleton()
+	}
 	return child.DialContext(ctx, network, address)
 }
 

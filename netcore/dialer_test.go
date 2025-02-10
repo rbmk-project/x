@@ -357,7 +357,7 @@ func TestNetwork_dialLog(t *testing.T) {
 }
 
 func TestNetwork_dialNet(t *testing.T) {
-	t.Run("using custom dialer", func(t *testing.T) {
+	t.Run("using custom DialContextFunc", func(t *testing.T) {
 		mockConn := &mocks.Conn{}
 		nx := &Network{
 			DialContextFunc: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -369,7 +369,27 @@ func TestNetwork_dialNet(t *testing.T) {
 		assert.Equal(t, mockConn, conn)
 	})
 
-	t.Run("using net package", func(t *testing.T) {
+	t.Run("using custom NewDialerOrSingleton", func(t *testing.T) {
+		// create a server using localhost to test against
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		nx := &Network{
+			NewDialerOrSingleton: func() *net.Dialer {
+				d := &net.Dialer{}
+				return d
+			},
+		}
+		parsed := runtimex.Try1(url.Parse(server.URL))
+		conn, err := nx.dialNet(context.Background(), "tcp", parsed.Host)
+		assert.NoError(t, err)
+		assert.NotNil(t, conn)
+		conn.Close()
+	})
+
+	t.Run("using the default dialer", func(t *testing.T) {
 		// create a server using localhost to test against
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
