@@ -80,7 +80,8 @@ type Network struct {
 	// name suggests, this function may either create a new [*net.Dialer]
 	// for each call or just return a singleton instance. When this method
 	// is not set, we use an internal, static [*net.Dialer] where
-	// support for Multipath TCP has been disabled.
+	// support for Multipath TCP has been disabled. We disable Multipath
+	// TCP because we focus on precise internet measurements.
 	NewDialerOrSingleton func() *net.Dialer
 }
 
