@@ -67,6 +67,21 @@ type Network struct {
 	// DialContextTimeout is the optional timeout to use for limiting
 	// the maximum time spent creating a single connection.
 	DialContextTimeout time.Duration
+
+	// NewResolverOrSingleton is the optional function that returns
+	// the [*net.Resolver] to use when LookupHostFunc is not set. As the
+	// name suggests, this function may either create a new [*net.Resolver]
+	// for each call or just return a singleton instance. When this method
+	// is not set, we use an internal zero-initialized, static [*net.Resolver].
+	NewResolverOrSingleton func() *net.Resolver
+
+	// NewDialerOrSingleton is the optional function that returns
+	// the [*net.Dialer] to use when DialContextFunc is not set. As the
+	// name suggests, this function may either create a new [*net.Dialer]
+	// for each call or just return a singleton instance. When this method
+	// is not set, we use an internal, static [*net.Dialer] where
+	// support for Multipath TCP has been disabled.
+	NewDialerOrSingleton func() *net.Dialer
 }
 
 // DefaultNetwork is the default [*Network] used by this package.

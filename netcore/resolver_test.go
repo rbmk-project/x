@@ -101,19 +101,16 @@ func TestNetwork_maybeLookupHost(t *testing.T) {
 	})
 
 	t.Run("system resolver error", func(t *testing.T) {
-		// Temporarily override maybeEditResolver and restore it when done
-		maybeEditResolver = func(reso *net.Resolver) *net.Resolver {
-			reso.PreferGo = true
-			reso.Dial = func(ctx context.Context, network, address string) (net.Conn, error) {
-				return nil, errors.New("mocked dial error")
-			}
-			return reso
+		nx := &Network{
+			NewResolverOrSingleton: func() *net.Resolver {
+				reso := &net.Resolver{}
+				reso.PreferGo = true
+				reso.Dial = func(ctx context.Context, network, address string) (net.Conn, error) {
+					return nil, errors.New("mocked dial error")
+				}
+				return reso
+			},
 		}
-		defer func() {
-			maybeEditResolver = avoidEditingResolver
-		}()
-
-		nx := &Network{}
 		_, err := nx.maybeLookupHost(context.Background(), "example.com")
 		assert.Error(t, err)
 	})
