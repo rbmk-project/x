@@ -63,6 +63,10 @@ type Network struct {
 	// LookupHostTimeout is the optional timeout to use for limiting
 	// the maximum time spent resolving a domain name.
 	LookupHostTimeout time.Duration
+
+	// DialContextTimeout is the optional timeout to use for limiting
+	// the maximum time spent creating a single connection.
+	DialContextTimeout time.Duration
 }
 
 // DefaultNetwork is the default [*Network] used by this package.

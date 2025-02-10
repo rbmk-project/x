@@ -162,6 +162,9 @@ func TestNetwork_dialLog(t *testing.T) {
 				return fixedTime
 			},
 			DialContextFunc: func(ctx context.Context, network, address string) (net.Conn, error) {
+				deadline, hasDeadline := ctx.Deadline()
+				assert.False(t, hasDeadline, "context should not have deadline")
+				assert.Equal(t, time.Time{}, deadline)
 				return mockConn, nil
 			},
 		}
@@ -254,6 +257,96 @@ func TestNetwork_dialLog(t *testing.T) {
 			"msg":        "connectDone",
 			"err":        expectedErr.Error(),
 			"errClass":   "EGENERIC",
+			"localAddr":  "",
+			"protocol":   "tcp",
+			"remoteAddr": "1.1.1.1:80",
+			"t0":         fixedTime.Format(time.RFC3339Nano),
+			"t":          fixedTime.Format(time.RFC3339Nano),
+		}, doneLog)
+	})
+
+	t.Run("successful dial without logging", func(t *testing.T) {
+		mockConn := &mocks.Conn{
+			MockLocalAddr: func() net.Addr {
+				return &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
+			},
+			MockRemoteAddr: func() net.Addr {
+				return &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 80}
+			},
+		}
+
+		nx := &Network{
+			DialContextFunc: func(ctx context.Context, network, address string) (net.Conn, error) {
+				return mockConn, nil
+			},
+		}
+
+		conn, err := nx.dialLog(context.Background(), "tcp", "1.1.1.1:80")
+		assert.NoError(t, err)
+		assert.Equal(t, mockConn, conn)
+	})
+
+	t.Run("dial timeout exceeded", func(t *testing.T) {
+		var buf bytes.Buffer
+		fixedTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		logger := slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if a.Key == slog.TimeKey {
+					return slog.Attr{}
+				}
+				return a
+			},
+		}))
+
+		nx := &Network{
+			Logger: logger,
+			TimeNow: func() time.Time {
+				return fixedTime
+			},
+			DialContextFunc: func(ctx context.Context, network, address string) (net.Conn, error) {
+				_, hasDeadline := ctx.Deadline()
+				assert.True(t, hasDeadline, "context should have deadline")
+
+				// Simulate slow operation that should be interrupted by timeout
+				select {
+				case <-time.After(250 * time.Millisecond):
+					return nil, errors.New("timeout not respected")
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				}
+			},
+			DialContextTimeout: time.Microsecond,
+		}
+
+		conn, err := nx.dialLog(context.Background(), "tcp", "1.1.1.1:80")
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+		assert.Nil(t, conn)
+
+		logs := strings.Split(strings.TrimSpace(buf.String()), "\n")
+		assert.Len(t, logs, 2)
+
+		// Verify connectStart log
+		var startLog map[string]interface{}
+		err = json.Unmarshal([]byte(logs[0]), &startLog)
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]interface{}{
+			"level":      "INFO",
+			"msg":        "connectStart",
+			"protocol":   "tcp",
+			"remoteAddr": "1.1.1.1:80",
+			"t":          fixedTime.Format(time.RFC3339Nano),
+		}, startLog)
+
+		// Verify connectDone log
+		var doneLog map[string]interface{}
+		err = json.Unmarshal([]byte(logs[1]), &doneLog)
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]interface{}{
+			"level":      "INFO",
+			"msg":        "connectDone",
+			"err":        context.DeadlineExceeded.Error(),
+			"errClass":   "ETIMEDOUT",
 			"localAddr":  "",
 			"protocol":   "tcp",
 			"remoteAddr": "1.1.1.1:80",
