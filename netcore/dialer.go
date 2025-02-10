@@ -52,6 +52,9 @@ func (nx *Network) sequentialDial(
 		}
 		errv = append(errv, err)
 	}
+	if len(errv) <= 0 {
+		return nil, errors.New("no endpoints to dial")
+	}
 	return nil, errors.Join(errv...)
 }
 
@@ -68,7 +71,8 @@ func (nx *Network) dialLog(ctx context.Context, network, address string) (net.Co
 	// Emit structured event after the dial
 	nx.emitConnectDone(ctx, network, address, t0, conn, err)
 
-	// Maybe wrap the connection if it's not nil and it makes sense to wrap it
+	// Maybe wrap the connection if it's not nil and it makes sense
+	// to wrap it (i.e., we have logging enabled)
 	conn = nx.maybeWrapConn(ctx, conn)
 
 	// Return the connection and error to the caller
@@ -83,6 +87,8 @@ func (nx *Network) dialNet(ctx context.Context, network, address string) (net.Co
 	}
 
 	// otherwise use the net package
+	// TODO(bassosimone): either make multipath TCP configurable
+	// or document that we disable it by default
 	child := &net.Dialer{}
 	child.SetMultipathTCP(false)
 	return child.DialContext(ctx, network, address)
