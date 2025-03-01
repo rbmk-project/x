@@ -4,7 +4,7 @@ go 1.23.3
 
 require (
 	github.com/miekg/dns v1.1.63
-	github.com/rbmk-project/common v0.17.0
+	github.com/rbmk-project/common v0.19.0
 	github.com/rbmk-project/dnscore v0.10.0
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/stretchr/testify v1.10.0
