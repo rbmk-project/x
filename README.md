@@ -1,6 +1,6 @@
 # Experimental libraries
 
-[![GoDoc](https://pkg.go.dev/badge/github.com/rbmk-project/x)](https://pkg.go.dev/github.com/rbmk-project/x)
+[![GoDoc](https://pkg.go.dev/badge/github.com/rbmk-project/x)](https://pkg.go.dev/github.com/rbmk-project/x) [![Build Status](https://github.com/rbmk-project/x/actions/workflows/go.yml/badge.svg)](https://github.com/rbmk-project/x/actions) [![codecov](https://codecov.io/gh/rbmk-project/x/branch/main/graph/badge.svg)](https://codecov.io/gh/rbmk-project/x)
 
 This repository contains several experimental libraries
 reused across different [rbmk](https://github.com/rbmk-project)
