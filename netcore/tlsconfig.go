@@ -42,6 +42,8 @@ func newTLSConfig(network, address string, pool *x509.CertPool) (*tls.Config, er
 		config.NextProtos = []string{"h3"}
 	case port == "853" && network == "tcp":
 		config.NextProtos = []string{"doh"}
+	case port == "853" && network == "udp":
+		config.NextProtos = []string{"doq"}
 	}
 
 	return config, nil
