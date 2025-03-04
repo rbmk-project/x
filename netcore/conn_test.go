@@ -685,4 +685,150 @@ func Test_connWrapper(t *testing.T) {
 			assert.Equal(t, len(data), n)
 		})
 	})
+
+	t.Run("LocalAddr", func(t *testing.T) {
+		// Create a mock connection with a specific local address
+		expectedAddr := &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 1234}
+		mockConn := &mocks.Conn{
+			MockLocalAddr: func() net.Addr {
+				return expectedAddr
+			},
+		}
+
+		// Create a wrapper around the mock
+		wrapper := &connWrapper{
+			conn: mockConn,
+			// Other fields aren't relevant for this test
+		}
+
+		// Test the LocalAddr method
+		addr := wrapper.LocalAddr()
+
+		// Verify it returns the expected address
+		assert.Equal(t, expectedAddr, addr)
+	})
+
+	t.Run("RemoteAddr", func(t *testing.T) {
+		// Create a mock connection with a specific remote address
+		expectedAddr := &net.TCPAddr{IP: net.ParseIP("1.1.1.1"), Port: 443}
+		mockConn := &mocks.Conn{
+			MockRemoteAddr: func() net.Addr {
+				return expectedAddr
+			},
+		}
+
+		// Create a wrapper around the mock
+		wrapper := &connWrapper{
+			conn: mockConn,
+			// Other fields aren't relevant for this test
+		}
+
+		// Test the RemoteAddr method
+		addr := wrapper.RemoteAddr()
+
+		// Verify it returns the expected address
+		assert.Equal(t, expectedAddr, addr)
+	})
+
+	t.Run("SetDeadline", func(t *testing.T) {
+		// Track if SetDeadline was called with the correct value
+		var calledWithTime time.Time
+
+		mockConn := &mocks.Conn{
+			MockSetDeadline: func(t time.Time) error {
+				calledWithTime = t
+				return nil
+			},
+		}
+
+		// Create a wrapper around the mock
+		wrapper := &connWrapper{
+			conn: mockConn,
+		}
+
+		// Call the method with a specific time
+		expectedTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+		err := wrapper.SetDeadline(expectedTime)
+
+		// Verify the method call was passed through to the underlying conn
+		assert.NoError(t, err)
+		assert.Equal(t, expectedTime, calledWithTime)
+
+		// Test error propagation
+		expectedErr := errors.New("deadline error")
+		mockConn.MockSetDeadline = func(t time.Time) error {
+			return expectedErr
+		}
+
+		err = wrapper.SetDeadline(time.Now())
+		assert.ErrorIs(t, err, expectedErr)
+	})
+
+	t.Run("SetReadDeadline", func(t *testing.T) {
+		// Track if SetReadDeadline was called with the correct value
+		var calledWithTime time.Time
+
+		mockConn := &mocks.Conn{
+			MockSetReadDeadline: func(t time.Time) error {
+				calledWithTime = t
+				return nil
+			},
+		}
+
+		// Create a wrapper around the mock
+		wrapper := &connWrapper{
+			conn: mockConn,
+		}
+
+		// Call the method with a specific time
+		expectedTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+		err := wrapper.SetReadDeadline(expectedTime)
+
+		// Verify the method call was passed through to the underlying conn
+		assert.NoError(t, err)
+		assert.Equal(t, expectedTime, calledWithTime)
+
+		// Test error propagation
+		expectedErr := errors.New("read deadline error")
+		mockConn.MockSetReadDeadline = func(t time.Time) error {
+			return expectedErr
+		}
+
+		err = wrapper.SetReadDeadline(time.Now())
+		assert.ErrorIs(t, err, expectedErr)
+	})
+
+	t.Run("SetWriteDeadline", func(t *testing.T) {
+		// Track if SetWriteDeadline was called with the correct value
+		var calledWithTime time.Time
+
+		mockConn := &mocks.Conn{
+			MockSetWriteDeadline: func(t time.Time) error {
+				calledWithTime = t
+				return nil
+			},
+		}
+
+		// Create a wrapper around the mock
+		wrapper := &connWrapper{
+			conn: mockConn,
+		}
+
+		// Call the method with a specific time
+		expectedTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+		err := wrapper.SetWriteDeadline(expectedTime)
+
+		// Verify the method call was passed through to the underlying conn
+		assert.NoError(t, err)
+		assert.Equal(t, expectedTime, calledWithTime)
+
+		// Test error propagation
+		expectedErr := errors.New("write deadline error")
+		mockConn.MockSetWriteDeadline = func(t time.Time) error {
+			return expectedErr
+		}
+
+		err = wrapper.SetWriteDeadline(time.Now())
+		assert.ErrorIs(t, err, expectedErr)
+	})
 }

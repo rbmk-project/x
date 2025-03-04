@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -268,5 +269,107 @@ func Test_tlsDialer_dial(t *testing.T) {
 
 		assert.True(t, handshakeStartFound, "tlsHandshakeStart log entry not found")
 		assert.True(t, handshakeDoneFound, "tlsHandshakeDone log entry not found")
+	})
+}
+
+func Test_tlsPeerCerts(t *testing.T) {
+	t.Run("extracts cert from x509.HostnameError", func(t *testing.T) {
+		// Create a dummy certificate
+		cert := &x509.Certificate{
+			Raw: []byte{1, 2, 3, 4},
+		}
+
+		// Create a hostname error with our certificate
+		err := x509.HostnameError{
+			Certificate: cert,
+		}
+
+		// Call the function
+		certs := tlsPeerCerts(tls.ConnectionState{}, err)
+
+		// Verify the result
+		assert.Len(t, certs, 1)
+		assert.Equal(t, cert.Raw, certs[0])
+	})
+
+	t.Run("extracts cert from x509.UnknownAuthorityError", func(t *testing.T) {
+		// Create a dummy certificate
+		cert := &x509.Certificate{
+			Raw: []byte{5, 6, 7, 8},
+		}
+
+		// Create an unknown authority error with our certificate
+		err := x509.UnknownAuthorityError{
+			Cert: cert,
+		}
+
+		// Call the function
+		certs := tlsPeerCerts(tls.ConnectionState{}, err)
+
+		// Verify the result
+		assert.Len(t, certs, 1)
+		assert.Equal(t, cert.Raw, certs[0])
+	})
+
+	t.Run("extracts cert from x509.CertificateInvalidError", func(t *testing.T) {
+		// Create a dummy certificate
+		cert := &x509.Certificate{
+			Raw: []byte{9, 10, 11, 12},
+		}
+
+		// Create a certificate invalid error with our certificate
+		err := x509.CertificateInvalidError{
+			Cert: cert,
+		}
+
+		// Call the function
+		certs := tlsPeerCerts(tls.ConnectionState{}, err)
+
+		// Verify the result
+		assert.Len(t, certs, 1)
+		assert.Equal(t, cert.Raw, certs[0])
+	})
+
+	t.Run("extracts certs from connection state", func(t *testing.T) {
+		// Create some dummy certificates
+		cert1 := &x509.Certificate{Raw: []byte{1, 2, 3, 4}}
+		cert2 := &x509.Certificate{Raw: []byte{5, 6, 7, 8}}
+
+		// Create a connection state with our certificates
+		state := tls.ConnectionState{
+			PeerCertificates: []*x509.Certificate{cert1, cert2},
+		}
+
+		// Call the function with no error
+		certs := tlsPeerCerts(state, nil)
+
+		// Verify the result
+		assert.Len(t, certs, 2)
+		assert.Equal(t, cert1.Raw, certs[0])
+		assert.Equal(t, cert2.Raw, certs[1])
+	})
+
+	t.Run("handles other errors correctly", func(t *testing.T) {
+		// Create some dummy certificates in the state
+		cert1 := &x509.Certificate{Raw: []byte{1, 2, 3, 4}}
+		state := tls.ConnectionState{
+			PeerCertificates: []*x509.Certificate{cert1},
+		}
+
+		// Create a different type of error
+		err := errors.New("some other error")
+
+		// Call the function
+		certs := tlsPeerCerts(state, err)
+
+		// Verify we get certificates from the state
+		assert.Len(t, certs, 1)
+		assert.Equal(t, cert1.Raw, certs[0])
+	})
+
+	t.Run("returns empty slice for no certificates", func(t *testing.T) {
+		// Empty state, no error
+		certs := tlsPeerCerts(tls.ConnectionState{}, nil)
+		assert.Empty(t, certs)
 	})
 }
