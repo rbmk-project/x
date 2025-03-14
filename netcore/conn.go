@@ -52,6 +52,9 @@ func (nx *Network) maybeWrapConn(ctx context.Context, conn net.Conn) net.Conn {
 }
 
 // WrapConn wraps a given [net.Conn] to emit structured logs.
+//
+// The context argument is only used for logging and does not constrain
+// in any way the lifetime of the wrapped connection.
 func WrapConn(ctx context.Context, netx *Network, conn net.Conn) net.Conn {
 	laddr := connLocalAddr(conn)
 	conn = &connWrapper{
