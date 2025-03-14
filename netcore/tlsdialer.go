@@ -62,17 +62,19 @@ func (td *tlsDialer) dial(ctx context.Context, network, address string) (net.Con
 	}
 
 	// create TLS client connection
-	tconn := td.netx.newTLSClientConn(conn, td.config)
+	engine := td.netx.newTLSEngine()
+	tconn := engine.NewClientConn(conn, td.config)
 
 	// emit event before the TLS handshake
 	laddr := connLocalAddr(conn).String()
-	t0 := td.emitTLSHandshakeStart(ctx, laddr, network, address)
+	t0 := td.emitTLSHandshakeStart(ctx, laddr, network, address, engine)
 
 	// perform the TLS handshake
 	err = tconn.HandshakeContext(ctx)
 
 	// emit event after the TLS handshake
-	td.emitTLSHandshakeDone(ctx, laddr, network, address, t0, err, tconn.ConnectionState())
+	td.emitTLSHandshakeDone(
+		ctx, laddr, network, address, engine, t0, err, tconn.ConnectionState())
 
 	// process the results
 	if err != nil {
@@ -82,17 +84,9 @@ func (td *tlsDialer) dial(ctx context.Context, network, address string) (net.Con
 	return tconn, nil
 }
 
-// newTLSClientConn creates a new TLS client connection.
-func (nx *Network) newTLSClientConn(conn net.Conn, config *tls.Config) TLSConn {
-	if nx.NewTLSClientConn != nil {
-		return nx.NewTLSClientConn(conn, config)
-	}
-	return tls.Client(conn, config)
-}
-
 // emitTLSHandshakeStart emits a TLS handshake start event.
-func (td *tlsDialer) emitTLSHandshakeStart(
-	ctx context.Context, localAddr, network, remoteAddr string) time.Time {
+func (td *tlsDialer) emitTLSHandshakeStart(ctx context.Context,
+	localAddr, network, remoteAddr string, engine TLSEngine) time.Time {
 	t0 := td.netx.timeNow()
 	if td.netx.Logger != nil {
 		td.netx.Logger.InfoContext(
@@ -102,6 +96,8 @@ func (td *tlsDialer) emitTLSHandshakeStart(
 			slog.String("protocol", network),
 			slog.String("remoteAddr", remoteAddr),
 			slog.Time("t", t0),
+			slog.String("tlsEngineName", engine.Name()),
+			slog.String("tlsParrot", engine.Parrot()),
 			slog.String("tlsServerName", td.config.ServerName),
 			slog.Bool("tlsSkipVerify", td.config.InsecureSkipVerify),
 		)
@@ -111,7 +107,8 @@ func (td *tlsDialer) emitTLSHandshakeStart(
 
 // emitTLSHandshakeDone emits a TLS handshake done event.
 func (td *tlsDialer) emitTLSHandshakeDone(ctx context.Context,
-	localAddr, network, remoteAddr string, t0 time.Time, err error, state tls.ConnectionState) {
+	localAddr, network, remoteAddr string, engine TLSEngine,
+	t0 time.Time, err error, state tls.ConnectionState) {
 	if td.netx.Logger != nil {
 		td.netx.Logger.InfoContext(
 			ctx,
@@ -124,6 +121,8 @@ func (td *tlsDialer) emitTLSHandshakeDone(ctx context.Context,
 			slog.Time("t0", t0),
 			slog.Time("t", td.netx.timeNow()),
 			slog.String("tlsCipherSuite", tls.CipherSuiteName(state.CipherSuite)),
+			slog.String("tlsEngineName", engine.Name()),
+			slog.String("tlsParrot", engine.Parrot()),
 			slog.String("tlsNegotiatedProtocol", state.NegotiatedProtocol),
 			slog.Any("tlsPeerCerts", tlsPeerCerts(state, err)),
 			slog.String("tlsServerName", td.config.ServerName),

@@ -40,6 +40,14 @@ type Network struct {
 
 	// NewTLSClientConn is the optional function to create a new TLS client
 	// connection. If this field is nil, we use the [crypto/tls] package.
+	//
+	// If this field is not nil and TLSEngine is also not nil, the latter
+	// will take precedence in creating a new [TLSConn].
+	//
+	// When using this field, the "tlsEngineName" and "tlsParrot" fields
+	// in the structured logs will both be set to "unknown".
+	//
+	// Deprecated: use the TLSEngine field instead.
 	NewTLSClientConn func(conn net.Conn, config *tls.Config) TLSConn
 
 	// RootCAs contains the optional [*x509.CertPool] used when
@@ -83,6 +91,11 @@ type Network struct {
 	// support for Multipath TCP has been disabled. We disable Multipath
 	// TCP because we focus on precise internet measurements.
 	NewDialerOrSingleton func() *net.Dialer
+
+	// TLSEngine is the optional [TLSEngine] to use for creating a new
+	// instance of [TLSConn]. If this field is nil, we create on the fly
+	// and use an instance of [TLSEngineStdlib].
+	TLSEngine TLSEngine
 }
 
 // DefaultNetwork is the default [*Network] used by this package.
