@@ -251,6 +251,8 @@ func Test_tlsDialer_dial(t *testing.T) {
 				assert.Equal(t, "127.0.0.1:1234", logMap["localAddr"])
 				assert.Equal(t, "tcp", logMap["protocol"])
 				assert.Equal(t, "example.com:443", logMap["remoteAddr"])
+				assert.Equal(t, "unknown", logMap["tlsEngineName"])
+				assert.Equal(t, "unknown", logMap["tlsParrot"])
 				assert.Equal(t, "example.com", logMap["tlsServerName"])
 				assert.Equal(t, false, logMap["tlsSkipVerify"])
 			} else if logMap["msg"] == "tlsHandshakeDone" {
@@ -260,6 +262,8 @@ func Test_tlsDialer_dial(t *testing.T) {
 				assert.Equal(t, "127.0.0.1:1234", logMap["localAddr"])
 				assert.Equal(t, "tcp", logMap["protocol"])
 				assert.Equal(t, "example.com:443", logMap["remoteAddr"])
+				assert.Equal(t, "unknown", logMap["tlsEngineName"])
+				assert.Equal(t, "unknown", logMap["tlsParrot"])
 				assert.Equal(t, "", logMap["tlsNegotiatedProtocol"])
 				assert.Equal(t, "example.com", logMap["tlsServerName"])
 				assert.Equal(t, false, logMap["tlsSkipVerify"])
