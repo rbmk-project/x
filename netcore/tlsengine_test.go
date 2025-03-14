@@ -15,17 +15,17 @@ type tlsEngineMock struct{}
 
 var _ TLSEngine = &tlsEngineMock{}
 
-// Name implements TLSEngine.
+// Name implements [TLSEngine].
 func (t *tlsEngineMock) Name() string {
 	panic("unimplemented")
 }
 
-// NewClientConn implements TLSEngine.
+// NewClientConn implements [TLSEngine].
 func (t *tlsEngineMock) NewClientConn(conn net.Conn, config *tls.Config) TLSConn {
 	panic("unimplemented")
 }
 
-// Parrot implements TLSEngine.
+// Parrot implements [TLSEngine].
 func (t *tlsEngineMock) Parrot() string {
 	panic("unimplemented")
 }
