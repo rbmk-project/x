@@ -6,6 +6,20 @@ This repository contains several experimental libraries
 reused across different [rbmk](https://github.com/rbmk-project)
 repositories.
 
+## 📦 Archived
+
+This repository has been merged into the main [`rbmk`](
+https://github.com/rbmk-project/rbmk) repository with
+[rbmk#78](https://github.com/rbmk-project/rbmk/pull/78).
+
+Please, update the import paths as follows:
+
+```
+github.com/rbmk-project/x/FOO => github.com/rbmk-project/rbmk/pkg/x/FOO
+```
+
+This repository is archived for historical reference.
+
 ## Minimum Required Go Version
 
 We maintain compatibility with the oldest supported version of Go as
